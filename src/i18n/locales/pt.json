@@ -136,6 +136,10 @@
       "name": "Auto-switch context",
       "desc": "When the active note changes, open the most recent chat for that note's folder or nearest ancestor. Never creates a chat."
     },
+    "openChatFilesInChat": {
+      "name": "Abrir arquivos de chat na vista de chat",
+      "desc": "Clicar em um arquivo .chat.md abre a conversa em vez do arquivo markdown. Desativado: os arquivos de chat abrem como notas comuns."
+    },
     "titleLanguage": {
       "name": "Idioma de geração de títulos",
       "desc": "Idioma usado para títulos de conversa gerados automaticamente.",

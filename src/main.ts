@@ -296,6 +296,7 @@ export default class ClaudianPlugin extends Plugin {
       conversations: domains.conversations,
       views: this.views,
       isWriteHistoryFileEnabled: () => this.settings.writeHistoryFile === true,
+      isOpenChatFilesInChatEnabled: () => this.settings.openChatFilesInChat === true,
       reportError: () => {
         new Notice('Chat history file operation failed');
       },

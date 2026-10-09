@@ -107,6 +107,12 @@ function normalizeAutoSwitchContext(value: unknown): boolean {
     : DEFAULT_CLAUDIAN_SETTINGS.autoSwitchContext;
 }
 
+function normalizeOpenChatFilesInChat(value: unknown): boolean {
+  return typeof value === 'boolean'
+    ? value
+    : DEFAULT_CLAUDIAN_SETTINGS.openChatFilesInChat;
+}
+
 function normalizeSessionManagerOrganization(
   value: unknown,
 ): SessionManagerOrganization {
@@ -487,6 +493,7 @@ export class ClaudianSettingsStorage {
     );
     const writeHistoryFile = normalizeWriteHistoryFile(stored.writeHistoryFile);
     const autoSwitchContext = normalizeAutoSwitchContext(stored.autoSwitchContext);
+    const openChatFilesInChat = normalizeOpenChatFilesInChat(stored.openChatFilesInChat);
     const hasCanonicalPinnedPaths = Object.prototype.hasOwnProperty.call(
       stored,
       'pinnedLinkedContentPaths',
@@ -522,6 +529,7 @@ export class ClaudianSettingsStorage {
       restoreTabsOnStartup,
       writeHistoryFile,
       autoSwitchContext,
+      openChatFilesInChat,
       skillsSynced,
       sessionManagerOrganization,
       pinnedLinkedContentPaths,

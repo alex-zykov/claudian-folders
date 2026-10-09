@@ -20,6 +20,7 @@ export interface ChatHistoryFileSubsystemDeps {
   readonly conversations: ConversationService;
   readonly views: ClaudianViews;
   isWriteHistoryFileEnabled(): boolean;
+  isOpenChatFilesInChatEnabled(): boolean;
   reportError(error: unknown): void;
 }
 
@@ -90,6 +91,7 @@ export class ChatHistoryFileSubsystem {
         if (manager) await manager.openConversation(id);
       },
       hasConversation: id => deps.conversations.hasLiveConversation(id),
+      isEnabled: () => deps.isOpenChatFilesInChatEnabled(),
       findConversationAcrossViews: id => deps.views.findConversationAcrossViews(id),
     });
 

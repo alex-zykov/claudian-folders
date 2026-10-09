@@ -432,6 +432,19 @@ export class ClaudianSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(container)
+      .setName(t('settings.openChatFilesInChat.name'))
+      .setDesc(t('settings.openChatFilesInChat.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.host.settings.openChatFilesInChat ?? false)
+          .onChange(async (value) => {
+            await this.host.mutateSettings((settings) => {
+              settings.openChatFilesInChat = value;
+            });
+          })
+      );
+
     if (this.host.settings.enableAutoTitleGeneration) {
       new Setting(container)
         .setName(t('settings.titleLanguage.name'))

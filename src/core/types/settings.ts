@@ -180,6 +180,11 @@ export interface ClaudianSettings {
    * linked folder equals the note's folder or is its nearest ancestor.
    */
   autoSwitchContext: boolean;
+  /**
+   * When true, opening a `.chat.md` file shows its conversation in the chat view.
+   * When false (default), chat files open as regular markdown notes.
+   */
+  openChatFilesInChat: boolean;
   chatViewPlacement: ChatViewPlacement;
   enableZenMode: boolean;
   /** Null keeps the zen panel docked. */

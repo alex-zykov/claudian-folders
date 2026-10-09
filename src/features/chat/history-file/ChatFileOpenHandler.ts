@@ -8,6 +8,8 @@ export interface ChatFileOpenHandlerDeps {
   activateView(): Promise<void>;
   openConversation(id: string): Promise<void>;
   hasConversation(id: string): boolean;
+  /** Chat routing is a user setting; when off, chat files open as regular markdown. */
+  isEnabled(): boolean;
   findConversationAcrossViews(
     conversationId: string,
   ): { view: { getTabManager(): { openConversation(id: string): Promise<void> } | null } } | null;
@@ -97,7 +99,7 @@ export class ChatFileOpenHandler {
   ): Promise<boolean> {
     if (!state || typeof state !== 'object') return false;
     const record = state as { type?: string; state?: { file?: string } };
-    if (record.type !== 'markdown') return false;
+    if (record.type !== 'markdown' || !this.#deps.isEnabled()) return false;
     const path = record.state?.file;
     if (typeof path !== 'string' || path.length === 0) return false;
     const file = this.#deps.app.vault.getAbstractFileByPath(path);

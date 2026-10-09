@@ -136,6 +136,10 @@
       "name": "Auto-switch context",
       "desc": "When the active note changes, open the most recent chat for that note's folder or nearest ancestor. Never creates a chat."
     },
+    "openChatFilesInChat": {
+      "name": "在聊天檢視中開啟聊天檔案",
+      "desc": "點擊 .chat.md 檔案時開啟對話，而非 Markdown 檔案。關閉時，聊天檔案會以一般筆記開啟。"
+    },
     "titleLanguage": {
       "name": "標題生成語言",
       "desc": "自動生成對話標題時使用的語言。",
