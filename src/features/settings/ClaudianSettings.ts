@@ -276,6 +276,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
             await this.host.mutateSettings((settings) => {
               settings.chatViewPlacement = value as ChatViewPlacement;
             });
+            // Auto-switch context depends on the placement.
+            this.update();
           });
       });
 
@@ -426,6 +428,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle
           .setValue(this.host.settings.autoSwitchContext ?? false)
+          // A chat in a main-area tab is a document of its own; only sidebar chats follow notes.
+          .setDisabled(this.host.settings.chatViewPlacement === 'main-tab')
           .onChange(async (value) => {
             await this.host.mutateSettings((settings) => {
               settings.autoSwitchContext = value;
