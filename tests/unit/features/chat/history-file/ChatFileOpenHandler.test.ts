@@ -21,8 +21,10 @@ describe('ChatFileOpenHandler', () => {
     const openConversation = jest.fn(async () => undefined);
     const activateView = jest.fn(async () => undefined);
     const original = jest.fn(async () => undefined);
+    const detach = jest.fn();
 
     const leaf = Object.create(ObsidianWorkspaceLeaf.prototype) as WorkspaceLeaf;
+    Object.assign(leaf, { detach });
     const previous = ObsidianWorkspaceLeaf.prototype.setViewState;
     ObsidianWorkspaceLeaf.prototype.setViewState = original;
 
@@ -62,6 +64,7 @@ describe('ChatFileOpenHandler', () => {
     expect(activateView).toHaveBeenCalled();
     expect(openConversation).toHaveBeenCalledWith('conv-open-1');
     expect(original).not.toHaveBeenCalled();
+    expect(detach).toHaveBeenCalledTimes(1);
 
     handler.allowNextMarkdownOpen();
     await leaf.setViewState({
@@ -73,6 +76,35 @@ describe('ChatFileOpenHandler', () => {
 
     handler.uninstall();
     expect(ObsidianWorkspaceLeaf.prototype.setViewState).toBe(original);
+    ObsidianWorkspaceLeaf.prototype.setViewState = previous;
+  });
+
+  it('forwards ordinary setViewState with the calling leaf as this', async () => {
+    const note = createFile('Projects/A/x.md');
+    let receivedThis: unknown;
+    const original = jest.fn(async function (this: WorkspaceLeaf) {
+      receivedThis = this;
+    });
+    const previous = ObsidianWorkspaceLeaf.prototype.setViewState;
+    ObsidianWorkspaceLeaf.prototype.setViewState = original;
+    const leaf = Object.create(ObsidianWorkspaceLeaf.prototype) as WorkspaceLeaf;
+    const app = {
+      vault: { getAbstractFileByPath: () => note },
+      metadataCache: { getFileCache: () => null },
+      workspace: { getLeaf: () => leaf, getMostRecentLeaf: () => leaf, getActiveFile: () => note },
+    } as unknown as App;
+
+    const handler = new ChatFileOpenHandler({
+      app,
+      activateView: jest.fn(async () => undefined),
+      openConversation: jest.fn(async () => undefined),
+      findConversationAcrossViews: () => null,
+    });
+    handler.install();
+    await leaf.setViewState({ type: 'markdown', state: { file: note.path }, active: true });
+    expect(original).toHaveBeenCalled();
+    expect(receivedThis).toBe(leaf);
+    handler.uninstall();
     ObsidianWorkspaceLeaf.prototype.setViewState = previous;
   });
 

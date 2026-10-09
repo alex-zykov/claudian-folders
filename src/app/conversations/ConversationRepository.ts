@@ -312,21 +312,15 @@ export class ConversationRepository {
   }
 
   async create(options?: {
-    /** Explicit conversation id (import). When set, `sessionId` is native-only. */
-    conversationId?: string;
     providerId?: ProviderId;
     sessionId?: string;
     selectedModel?: string;
     linkedContentPath?: string;
-    title?: string;
-    createdAt?: number;
-    lastActivityAt?: number;
-    providerState?: Record<string, unknown>;
   }): Promise<Conversation> {
     const settings = this.deps.getSettings();
     const providerId = options?.providerId ?? DEFAULT_CHAT_PROVIDER_ID;
     const sessionId = options?.sessionId;
-    const id = options?.conversationId ?? sessionId ?? this.generateId();
+    const id = sessionId ?? this.generateId();
     if (this.deletedConversationIds.has(id)) {
       throw new Error(`Conversation was deleted in this session: ${id}`);
     }
@@ -344,16 +338,15 @@ export class ConversationRepository {
     const conversation: Conversation = {
       id,
       providerId,
-      title: options?.title ?? this.#generateDefaultTitle(),
-      createdAt: options?.createdAt ?? now,
-      lastActivityAt: options?.lastActivityAt ?? now,
+      title: this.#generateDefaultTitle(),
+      createdAt: now,
+      lastActivityAt: now,
       sessionId: sessionId ?? null,
       selectedModel,
       messages: [],
       linkedContentPath: options?.linkedContentPath === undefined
         ? undefined
         : assertLinkedContentPath(options.linkedContentPath),
-      ...(options?.providerState ? { providerState: options.providerState } : {}),
     };
 
     this.metadataTargets.set(conversation.id, 'device');
@@ -370,6 +363,78 @@ export class ConversationRepository {
       throw error;
     }
     return this.#snapshot(conversation);
+  }
+
+  /**
+   * One-shot bootstrap of device metadata from a chat history file. Does not
+   * extend ordinary create, and refuses deleted/in-memory ids.
+   */
+  async importFromHistoryFile(input: {
+    id: string;
+    providerId: ProviderId;
+    title: string;
+    createdAt: number;
+    lastActivityAt: number;
+    sessionId: string | null;
+    linkedContentPath?: string;
+  }): Promise<Conversation | null> {
+    if (this.blocksHistoryFileImport(input.id)) return null;
+
+    const settings = this.deps.getSettings();
+    const providerSettings =
+      this.deps.providerSettings.getProviderSettingsSnapshot(
+        settings,
+        input.providerId,
+      );
+    const selectedModel = normalizeProviderModelSelection(
+      input.providerId,
+      settings,
+      providerSettings.model,
+    ) ?? undefined;
+    const conversation: Conversation = {
+      id: input.id,
+      providerId: input.providerId,
+      title: input.title,
+      createdAt: input.createdAt,
+      lastActivityAt: input.lastActivityAt,
+      sessionId: input.sessionId,
+      selectedModel,
+      messages: [],
+      linkedContentPath: input.linkedContentPath === undefined
+        ? undefined
+        : assertLinkedContentPath(input.linkedContentPath),
+    };
+
+    this.metadataTargets.set(conversation.id, 'device');
+    this.conversations.unshift(conversation);
+    this.recordsById.set(conversation.id, conversation);
+    this.#captureLinkedContentIdentity(conversation);
+    if (!input.sessionId) {
+      this.hydratedConversationIds.add(conversation.id);
+    }
+    try {
+      await this.save(conversation);
+    } catch (error) {
+      this.discardUnresolvedMetadataShells([conversation]);
+      throw error;
+    }
+    return this.#snapshot(conversation);
+  }
+
+  /** True when an in-session delete must block history-file import (no resurrection). */
+  wasDeletedInSession(id: string): boolean {
+    return this.deletedConversationIds.has(id)
+      || this.deletingConversationIds.has(id);
+  }
+
+  /** True when a live record already owns this id. */
+  hasLiveConversation(id: string): boolean {
+    return this.recordsById.has(id);
+  }
+
+  /** True when an in-session delete or live record must block history-file import. */
+  blocksHistoryFileImport(id: string): boolean {
+    return this.wasDeletedInSession(id) || this.hasLiveConversation(id);
   }
 
   async switchTo(id: string): Promise<Conversation | null> {

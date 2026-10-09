@@ -48,14 +48,21 @@ export class HistoryFileWriter {
       ? vault.getMarkdownFiles()
       : [];
     for (const file of files) {
-      const id = this.#readIdFromFile(file);
-      if (id) this.#pathByConversationId.set(id, file.path);
+      const cache = this.#deps.app.metadataCache?.getFileCache?.(file);
+      const id = readChatFileId(cache?.frontmatter);
+      if (!id) continue;
+      this.#pathByConversationId.set(id, file.path);
+      const title = cache?.frontmatter?.title;
+      if (typeof title === 'string') {
+        this.#titleByConversationId.set(id, title);
+      }
     }
   }
 
   scheduleWrite(conversationId: string): void {
     if (this.#disposed || !this.#deps.isEnabled()) return;
-    void this.#enqueue(conversationId, () => this.#writeConversation(conversationId));
+    void this.#enqueue(conversationId, () => this.#writeConversation(conversationId))
+      .catch(() => undefined);
   }
 
   async trashForConversation(conversationId: string): Promise<void> {
@@ -132,11 +139,13 @@ export class HistoryFileWriter {
       .catch(() => undefined)
       .then(operation);
     this.#queues.set(conversationId, next);
-    void next.finally(() => {
-      if (this.#queues.get(conversationId) === next) {
-        this.#queues.delete(conversationId);
-      }
-    });
+    void next
+      .finally(() => {
+        if (this.#queues.get(conversationId) === next) {
+          this.#queues.delete(conversationId);
+        }
+      })
+      .catch(() => undefined);
     return next;
   }
 
@@ -237,7 +246,8 @@ export class HistoryFileWriter {
     const existing = this.#deps.app.vault.getAbstractFileByPath(preferredPath);
     if (!(existing instanceof TFile)) return false;
     const id = this.#readIdFromFile(existing);
-    return id !== undefined && id !== conversationId;
+    // Any non-ours occupant (other chat, ordinary note, or missing id) needs a collision name.
+    return id !== conversationId;
   }
 
   #readIdFromFile(file: TFile): string | undefined {

@@ -33,19 +33,40 @@ export class ConversationService {
   }
 
   async createConversation(options?: {
-    conversationId?: string;
     providerId?: ProviderId;
     sessionId?: string;
     selectedModel?: string;
     linkedContentPath?: string;
-    title?: string;
-    createdAt?: number;
-    lastActivityAt?: number;
-    providerState?: Record<string, unknown>;
   }): Promise<Conversation> {
     const conversation = await this.deps.repository.create(options);
     this.notifyConversationListChanged();
     return conversation;
+  }
+
+  async importFromHistoryFile(input: {
+    id: string;
+    providerId: ProviderId;
+    title: string;
+    createdAt: number;
+    lastActivityAt: number;
+    sessionId: string | null;
+    linkedContentPath?: string;
+  }): Promise<Conversation | null> {
+    const conversation = await this.deps.repository.importFromHistoryFile(input);
+    if (conversation) this.notifyConversationListChanged();
+    return conversation;
+  }
+
+  wasDeletedInSession(id: string): boolean {
+    return this.deps.repository.wasDeletedInSession(id);
+  }
+
+  hasLiveConversation(id: string): boolean {
+    return this.deps.repository.hasLiveConversation(id);
+  }
+
+  blocksHistoryFileImport(id: string): boolean {
+    return this.deps.repository.blocksHistoryFileImport(id);
   }
 
   switchConversation(id: string): Promise<Conversation | null> {

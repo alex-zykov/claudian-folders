@@ -38,11 +38,12 @@ export class ChatFileOpenHandler {
     const proto = ObsidianWorkspaceLeaf.prototype as unknown as PatchedLeafPrototype | null;
     if (!proto || typeof proto.setViewState !== 'function') return;
 
-    const original = proto.setViewState.bind(proto);
+    // Keep the unbound method so call(this) uses the WorkspaceLeaf instance.
+    const original = proto.setViewState;
     // Prototype patch: Obsidian has no file-open intercept for markdown→chat routing.
     /* eslint-disable @typescript-eslint/no-this-alias -- leaf.prototype patch */
     const handler = this;
-    this.#originalSetViewState = proto.setViewState;
+    this.#originalSetViewState = original;
     this.#patchedProto = proto;
     proto.setViewState = async function patchedSetViewState(
       this: WorkspaceLeaf,
@@ -54,6 +55,7 @@ export class ChatFileOpenHandler {
         return original.call(this, state, ...rest);
       }
       if (await handler.#tryRouteChatFile(state)) {
+        this.detach();
         return;
       }
       return original.call(this, state, ...rest);

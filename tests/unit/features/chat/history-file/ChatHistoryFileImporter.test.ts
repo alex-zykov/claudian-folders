@@ -5,8 +5,6 @@ import { TFile } from 'obsidian';
 import type { Conversation } from '@/core/types';
 import {
   ChatHistoryFileImporter,
-  hasAnySessionMetadata,
-  hasSessionTombstone,
   readChatFileImportRecord,
 } from '@/features/chat/history-file/ChatHistoryFileImporter';
 
@@ -127,23 +125,5 @@ describe('ChatHistoryFileImporter', () => {
     known.scheduleScan();
     await new Promise(resolve => window.setTimeout(resolve, 0));
     expect(importConversation).not.toHaveBeenCalled();
-  });
-});
-
-describe('session metadata presence helpers', () => {
-  it('detects tombstones and meta across device folders', async () => {
-    const exists = jest.fn(async (path: string) => (
-      path === '.claudian/sessions/devices/dev-b/import-3.deleted.json'
-      || path === '.claudian/sessions/devices/dev-a/import-4.meta.json'
-    ));
-    const folders = async () => [
-      '.claudian/sessions/devices/dev-a',
-      '.claudian/sessions/devices/dev-b',
-    ];
-
-    expect(await hasSessionTombstone(exists, folders, 'import-3')).toBe(true);
-    expect(await hasSessionTombstone(exists, folders, 'import-4')).toBe(false);
-    expect(await hasAnySessionMetadata(exists, folders, 'import-4')).toBe(true);
-    expect(await hasAnySessionMetadata(exists, folders, 'import-3')).toBe(false);
   });
 });

@@ -1,11 +1,7 @@
 import type { App, TAbstractFile, TFile } from 'obsidian';
 import { TFile as ObsidianTFile } from 'obsidian';
 
-import {
-  DEVICE_SESSIONS_PATH,
-  isValidSessionMetadataId,
-  SESSIONS_PATH,
-} from '@/core/bootstrap/storagePaths';
+import { isValidSessionMetadataId } from '@/core/bootstrap/storagePaths';
 import type { ProviderId } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
 import { readChatFileId } from '@/features/chat/history-file/HistoryFileWriter';
@@ -18,15 +14,13 @@ export interface ChatHistoryFileImportRecord {
   lastActivityAt: number;
   sessionId: string | null;
   linkedContentPath?: string;
-  forkSessionId?: string;
-  forkResumeAt?: string;
 }
 
 export interface ChatHistoryFileImporterDeps {
   readonly app: App;
-  /** True when any metadata layer (device, flat, other devices) already owns this id. */
+  /** App admission: true when any metadata layer already owns this id. */
   hasAnyMetadata(id: string): Promise<boolean>;
-  /** True when a tombstone sidecar exists for this id. */
+  /** App admission: true when a tombstone or in-session delete blocks import. */
   hasTombstone(id: string): Promise<boolean>;
   /** Creates device-local metadata for an imported chat file without touching native history. */
   importConversation(record: ChatHistoryFileImportRecord): Promise<Conversation | null>;
@@ -35,6 +29,7 @@ export interface ChatHistoryFileImporterDeps {
 /**
  * Scans vault markdown for `claudian-chat` frontmatter and creates missing
  * device metadata. Never overwrites existing meta or resurrects tombstones.
+ * Storage-layout admission stays in app; this feature only reads frontmatter.
  */
 export class ChatHistoryFileImporter {
   readonly #deps: ChatHistoryFileImporterDeps;
@@ -106,54 +101,7 @@ export function readChatFileImportRecord(
     lastActivityAt,
     sessionId: typeof frontmatter.sessionId === 'string' ? frontmatter.sessionId : null,
     ...(typeof frontmatter.linked === 'string' ? { linkedContentPath: frontmatter.linked } : {}),
-    ...(typeof frontmatter.forkSessionId === 'string'
-      ? { forkSessionId: frontmatter.forkSessionId }
-      : {}),
-    ...(typeof frontmatter.forkResumeAt === 'string'
-      ? { forkResumeAt: frontmatter.forkResumeAt }
-      : {}),
   };
-}
-
-export async function hasSessionTombstone(
-  exists: (path: string) => Promise<boolean>,
-  listDeviceFolders: () => Promise<readonly string[]>,
-  id: string,
-): Promise<boolean> {
-  if (await exists(`${SESSIONS_PATH}/${id}.deleted.json`)) return true;
-  for (const folder of await listDeviceFolders()) {
-    if (await exists(`${folder}/${id}.deleted.json`)) return true;
-  }
-  return false;
-}
-
-export async function hasAnySessionMetadata(
-  exists: (path: string) => Promise<boolean>,
-  listDeviceFolders: () => Promise<readonly string[]>,
-  id: string,
-): Promise<boolean> {
-  if (await exists(`${SESSIONS_PATH}/${id}.meta.json`)) return true;
-  for (const folder of await listDeviceFolders()) {
-    if (await exists(`${folder}/${id}.meta.json`)) return true;
-  }
-  return false;
-}
-
-export async function listDeviceSessionFolders(
-  listFiles: (path: string) => Promise<string[]>,
-): Promise<string[]> {
-  try {
-    const entries = await listFiles(DEVICE_SESSIONS_PATH);
-    return entries
-      .filter(entry => !entry.includes('.') || !entry.endsWith('.json'))
-      .map(entry => (
-        entry.startsWith(`${DEVICE_SESSIONS_PATH}/`)
-          ? entry
-          : `${DEVICE_SESSIONS_PATH}/${entry}`
-      ));
-  } catch {
-    return [];
-  }
 }
 
 function parseTimestamp(value: unknown): number | undefined {

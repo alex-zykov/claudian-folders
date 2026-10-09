@@ -302,6 +302,78 @@ describe('HistoryFileWriter', () => {
     expect(harness.app.fileManager.trashFile).toHaveBeenCalled();
     expect(harness.contents.has('Projects/A/Plan review.chat.md')).toBe(false);
   });
+
+  it('uses a collision name when preferred path is occupied by a non-chat file', async () => {
+    const occupied = createFile('Projects/A/Plan review.chat.md', '# foreign note\n');
+    const harness = createVaultHarness([
+      createFolder('Projects/A'),
+      createFile('Projects/A/x.md'),
+      occupied,
+    ]);
+    const conversation = createConversation();
+    const writer = new HistoryFileWriter({
+      app: harness.app,
+      isEnabled: () => true,
+      getConversation: () => conversation,
+      hydrateConversation: async () => conversation,
+      listConversationMeta: () => [],
+    });
+    writer.scheduleWrite(conversation.id);
+    await flushQueues();
+    expect(harness.contents.has('Projects/A/Plan review.chat.md')).toBe(true);
+    expect(harness.contents.has('Projects/A/Plan review aaaaaaaa.chat.md')).toBe(true);
+    expect(harness.frontmatterByPath.get('Projects/A/Plan review aaaaaaaa.chat.md')?.id)
+      .toBe(conversation.id);
+  });
+
+  it('renames on title change after restart when title was seeded from frontmatter', async () => {
+    const existingPath = 'Projects/A/Plan review.chat.md';
+    const existing = createFile(existingPath, '---\nid: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\n---\n');
+    const harness = createVaultHarness([
+      createFolder('Projects/A'),
+      createFile('Projects/A/x.md'),
+      existing,
+    ]);
+    harness.frontmatterByPath.set(existingPath, {
+      'claudian-chat': true,
+      id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      title: 'Plan review',
+    });
+    harness.contents.set(existingPath, '---\ntitle: "Plan review"\nid: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\n---\nbody\n');
+
+    let conversation = createConversation({ title: 'Plan review' });
+    const writer = new HistoryFileWriter({
+      app: harness.app,
+      isEnabled: () => true,
+      getConversation: () => conversation,
+      hydrateConversation: async () => conversation,
+      listConversationMeta: () => [],
+    });
+    writer.seedFromMetadataCache();
+
+    conversation = createConversation({ title: 'Renamed plan' });
+    writer.scheduleWrite(conversation.id);
+    await flushQueues();
+
+    expect(harness.app.fileManager.renameFile).toHaveBeenCalled();
+    expect(harness.contents.has('Projects/A/Renamed plan.chat.md')).toBe(true);
+    expect(harness.contents.has(existingPath)).toBe(false);
+  });
+
+  it('swallows write errors from scheduleWrite without rejecting', async () => {
+    const harness = createVaultHarness([createFolder('Projects/A'), createFile('Projects/A/x.md')]);
+    (harness.app.vault.create as jest.Mock).mockRejectedValueOnce(new Error('exists'));
+    const conversation = createConversation();
+    const writer = new HistoryFileWriter({
+      app: harness.app,
+      isEnabled: () => true,
+      getConversation: () => conversation,
+      hydrateConversation: async () => conversation,
+      listConversationMeta: () => [],
+    });
+    expect(() => writer.scheduleWrite(conversation.id)).not.toThrow();
+    await flushQueues();
+  });
 });
 
 async function flushQueues(): Promise<void> {

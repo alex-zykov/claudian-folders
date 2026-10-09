@@ -78,15 +78,10 @@ export interface ChatFeatureHost extends FeatureHost {
   readonly chatHistoryFiles: ChatHistoryFilePort;
   readonly chatModelSelection: ChatModelSelectionPort;
   createConversation(options?: {
-    conversationId?: string;
     providerId?: ProviderId;
     sessionId?: string;
     selectedModel?: string;
     linkedContentPath?: string;
-    title?: string;
-    createdAt?: number;
-    lastActivityAt?: number;
-    providerState?: Record<string, unknown>;
   }): Promise<Conversation>;
   switchConversation(id: string): Promise<Conversation | null>;
   assignConversationToCurrentDevice(id: string): Promise<boolean>;
