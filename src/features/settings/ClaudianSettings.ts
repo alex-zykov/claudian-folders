@@ -419,6 +419,19 @@ export class ClaudianSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(container)
+      .setName(t('settings.autoSwitchContext.name'))
+      .setDesc(t('settings.autoSwitchContext.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.host.settings.autoSwitchContext ?? false)
+          .onChange(async (value) => {
+            await this.host.mutateSettings((settings) => {
+              settings.autoSwitchContext = value;
+            });
+          })
+      );
+
     if (this.host.settings.enableAutoTitleGeneration) {
       new Setting(container)
         .setName(t('settings.titleLanguage.name'))

@@ -175,6 +175,11 @@ export interface ClaudianSettings {
    * folder after each turn (providers with `supportsChatHistoryFile` only).
    */
   writeHistoryFile: boolean;
+  /**
+   * When true, switching the active note opens the most recent chat whose
+   * linked folder equals the note's folder or is its nearest ancestor.
+   */
+  autoSwitchContext: boolean;
   chatViewPlacement: ChatViewPlacement;
   enableZenMode: boolean;
   /** Null keeps the zen panel docked. */

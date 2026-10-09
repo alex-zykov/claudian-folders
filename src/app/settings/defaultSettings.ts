@@ -54,6 +54,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   deferMathRenderingDuringStreaming: true,
   expandFileEditsByDefault: false,
   writeHistoryFile: false,
+  autoSwitchContext: false,
   chatViewPlacement: 'right-sidebar',
   enableZenMode: true,
   zenModePosition: null,

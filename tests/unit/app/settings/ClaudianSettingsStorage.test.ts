@@ -345,6 +345,16 @@ describe('ClaudianSettingsStorage', () => {
       expect(result.writeHistoryFile).toBe(true);
     });
 
+    it('fails closed for invalid autoSwitchContext values', async () => {
+      mockAdapter.exists.mockResolvedValue(true);
+      mockAdapter.read.mockResolvedValue(JSON.stringify({
+        autoSwitchContext: 'yes',
+      }));
+
+      const result = await storage.load();
+      expect(result.autoSwitchContext).toBe(false);
+    });
+
     it.each([
       ['missing', {}, true],
       ['disabled', { enableZenMode: false }, false],

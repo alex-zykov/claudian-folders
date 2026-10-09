@@ -101,6 +101,12 @@ function normalizeWriteHistoryFile(value: unknown): boolean {
     : DEFAULT_CLAUDIAN_SETTINGS.writeHistoryFile;
 }
 
+function normalizeAutoSwitchContext(value: unknown): boolean {
+  return typeof value === 'boolean'
+    ? value
+    : DEFAULT_CLAUDIAN_SETTINGS.autoSwitchContext;
+}
+
 function normalizeSessionManagerOrganization(
   value: unknown,
 ): SessionManagerOrganization {
@@ -480,6 +486,7 @@ export class ClaudianSettingsStorage {
       stored.restoreTabsOnStartup,
     );
     const writeHistoryFile = normalizeWriteHistoryFile(stored.writeHistoryFile);
+    const autoSwitchContext = normalizeAutoSwitchContext(stored.autoSwitchContext);
     const hasCanonicalPinnedPaths = Object.prototype.hasOwnProperty.call(
       stored,
       'pinnedLinkedContentPaths',
@@ -514,6 +521,7 @@ export class ClaudianSettingsStorage {
       dualPaneSide,
       restoreTabsOnStartup,
       writeHistoryFile,
+      autoSwitchContext,
       skillsSynced,
       sessionManagerOrganization,
       pinnedLinkedContentPaths,
