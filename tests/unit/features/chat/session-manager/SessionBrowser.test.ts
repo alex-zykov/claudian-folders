@@ -560,7 +560,7 @@ describe('SessionBrowser', () => {
         const labels = container
           .querySelectorAll('.claudian-session-group-label')
           .map((label: { textContent: string }) => label.textContent);
-        expect(labels).toEqual(['Plan', 'Plan', 'Unlinked']);
+        expect(labels).toEqual(['Plan', 'Plan', 'Vault root']);
         expect(labels).not.toContain('Untitled 2');
         const groupHeaders = container.querySelectorAll('.claudian-session-group-header');
         expect(groupHeaders[0].getAttribute('title')).toBe('Projects/A/Plan.md');

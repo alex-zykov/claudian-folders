@@ -175,7 +175,7 @@ export function organizeSessionList(
     sections.push({
       key: 'ungrouped',
       kind: 'ungrouped',
-      label: 'Unlinked',
+      label: 'Vault root',
       conversations: ungrouped,
     });
   }

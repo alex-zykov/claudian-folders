@@ -12,6 +12,18 @@ export interface LinkedContentPresentation {
   readonly target: TAbstractFile | null;
 }
 
+/** Vault-backed port for {@link resolveLinkedFolder}: true/false when present, undefined when missing. */
+export function createVaultLinkedContentIsFolder(
+  app: App,
+): (path: string) => boolean | undefined {
+  return (path: string): boolean | undefined => {
+    const target = app.vault.getAbstractFileByPath(path);
+    if (target instanceof TFolder) return true;
+    if (target instanceof TFile) return false;
+    return undefined;
+  };
+}
+
 function finalPathSegment(path: string): string {
   const segments = path.split('/');
   return segments[segments.length - 1] || path;
