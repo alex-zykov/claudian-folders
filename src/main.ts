@@ -33,6 +33,13 @@ import { VIEW_TYPE_CLAUDIAN } from './core/types';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { ConversationLifecycle } from './features/chat/conversation/ConversationLifecycle';
 import { InactiveSessionArchiver } from './features/chat/conversation/InactiveSessionArchiver';
+import { ChatFileOpenHandler } from './features/chat/history-file/ChatFileOpenHandler';
+import {
+  ChatHistoryFileImporter,
+  hasAnySessionMetadata,
+  hasSessionTombstone,
+  listDeviceSessionFolders,
+} from './features/chat/history-file/ChatHistoryFileImporter';
 import { HistoryFileWriter } from './features/chat/history-file/HistoryFileWriter';
 import { createChatFocusCommand } from './features/chat/workspace/ChatFocusCommand';
 import { createChatTabCommands } from './features/chat/workspace/ChatTabCommands';
@@ -61,6 +68,8 @@ export default class ClaudianPlugin extends Plugin {
   private conversationLifecycle!: ConversationLifecycle;
   private vaultContentEvents!: VaultContentEvents;
   private historyFileWriter!: HistoryFileWriter;
+  private chatHistoryFileImporter!: ChatHistoryFileImporter;
+  private chatFileOpenHandler!: ChatFileOpenHandler;
   private settingsTab: ClaudianSettingTab | null = null;
   private readonly views = new ClaudianViews(
     this.app.workspace,
@@ -110,6 +119,21 @@ export default class ClaudianPlugin extends Plugin {
         registerEvent: eventRef => this.registerEvent(eventRef),
       });
       this.vaultContentEvents.register(eventRef => this.registerEvent(eventRef));
+      this.chatFileOpenHandler.install();
+      this.chatHistoryFileImporter.scheduleScan();
+      if (typeof this.app.vault?.on === 'function') {
+        this.registerEvent(this.app.vault.on('create', file => {
+          this.chatHistoryFileImporter.handleFileChanged(file);
+        }));
+        this.registerEvent(this.app.vault.on('modify', file => {
+          this.chatHistoryFileImporter.handleFileChanged(file);
+        }));
+      }
+      if (typeof this.app.metadataCache?.on === 'function') {
+        this.registerEvent(this.app.metadataCache.on('changed', file => {
+          this.chatHistoryFileImporter.handleFileChanged(file);
+        }));
+      }
 
       this.addRibbonIcon('bot', 'Open Claudian', () => {
         void this.views.activateView();
@@ -120,6 +144,21 @@ export default class ClaudianPlugin extends Plugin {
         name: 'Open chat view',
         callback: () => {
           void this.views.activateView();
+        },
+      });
+
+      this.addCommand({
+        id: 'open-chat-file-as-markdown',
+        name: 'Open chat file as Markdown',
+        checkCallback: (checking) => {
+          const file = this.app.workspace.getActiveFile();
+          const isChat = !!file
+            && this.app.metadataCache.getFileCache(file)?.frontmatter?.['claudian-chat'] === true;
+          if (!isChat) return false;
+          if (!checking) {
+            void this.chatFileOpenHandler.openActiveChatFileAsMarkdown();
+          }
+          return true;
         },
       });
 
@@ -175,6 +214,8 @@ export default class ClaudianPlugin extends Plugin {
     this.zenMode.dispose();
     this.vaultContentEvents?.dispose();
     this.historyFileWriter?.dispose();
+    this.chatHistoryFileImporter?.dispose();
+    this.chatFileOpenHandler?.uninstall();
     this.inactiveSessionArchiver?.dispose();
     this.startupMaintenanceAbort.abort();
     if (this.sessionInputCleanupTimer !== null) {
@@ -283,6 +324,47 @@ export default class ClaudianPlugin extends Plugin {
       listConversationMeta: () => domains.conversations.getConversationList(),
     });
     this.historyFileWriter.seedFromMetadataCache();
+    const adapter = domains.storage.getAdapter();
+    const listDeviceFolders = () => listDeviceSessionFolders(path => adapter.listFiles(path));
+    this.chatHistoryFileImporter = new ChatHistoryFileImporter({
+      app: this.app,
+      hasAnyMetadata: id => hasAnySessionMetadata(
+        path => adapter.exists(path),
+        listDeviceFolders,
+        id,
+      ),
+      hasTombstone: id => hasSessionTombstone(
+        path => adapter.exists(path),
+        listDeviceFolders,
+        id,
+      ),
+      importConversation: async (record) => {
+        const providerState = record.forkSessionId && record.forkResumeAt
+          ? { forkSource: { sessionId: record.forkSessionId, resumeAt: record.forkResumeAt } }
+          : undefined;
+        return domains.conversations.createConversation({
+          conversationId: record.id,
+          providerId: record.providerId,
+          sessionId: record.sessionId ?? undefined,
+          linkedContentPath: record.linkedContentPath,
+          title: record.title,
+          createdAt: record.createdAt,
+          lastActivityAt: record.lastActivityAt,
+          providerState,
+        });
+      },
+    });
+    this.chatFileOpenHandler = new ChatFileOpenHandler({
+      app: this.app,
+      activateView: () => this.views.activateView(),
+      openConversation: async (id) => {
+        await this.views.activateView();
+        const view = this.views.getView();
+        const manager = view?.getTabManager();
+        if (manager) await manager.openConversation(id);
+      },
+      findConversationAcrossViews: id => this.views.findConversationAcrossViews(id),
+    });
     this.vaultContentEvents = new VaultContentEvents({
       vault: this.app.vault,
       views: this.views,

@@ -312,15 +312,21 @@ export class ConversationRepository {
   }
 
   async create(options?: {
+    /** Explicit conversation id (import). When set, `sessionId` is native-only. */
+    conversationId?: string;
     providerId?: ProviderId;
     sessionId?: string;
     selectedModel?: string;
     linkedContentPath?: string;
+    title?: string;
+    createdAt?: number;
+    lastActivityAt?: number;
+    providerState?: Record<string, unknown>;
   }): Promise<Conversation> {
     const settings = this.deps.getSettings();
     const providerId = options?.providerId ?? DEFAULT_CHAT_PROVIDER_ID;
     const sessionId = options?.sessionId;
-    const id = sessionId ?? this.generateId();
+    const id = options?.conversationId ?? sessionId ?? this.generateId();
     if (this.deletedConversationIds.has(id)) {
       throw new Error(`Conversation was deleted in this session: ${id}`);
     }
@@ -334,18 +340,20 @@ export class ConversationRepository {
       settings,
       options?.selectedModel ?? providerSettings.model,
     ) ?? undefined;
+    const now = Date.now();
     const conversation: Conversation = {
       id,
       providerId,
-      title: this.#generateDefaultTitle(),
-      createdAt: Date.now(),
-      lastActivityAt: Date.now(),
+      title: options?.title ?? this.#generateDefaultTitle(),
+      createdAt: options?.createdAt ?? now,
+      lastActivityAt: options?.lastActivityAt ?? now,
       sessionId: sessionId ?? null,
       selectedModel,
       messages: [],
       linkedContentPath: options?.linkedContentPath === undefined
         ? undefined
         : assertLinkedContentPath(options.linkedContentPath),
+      ...(options?.providerState ? { providerState: options.providerState } : {}),
     };
 
     this.metadataTargets.set(conversation.id, 'device');

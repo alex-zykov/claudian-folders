@@ -33,10 +33,15 @@ export class ConversationService {
   }
 
   async createConversation(options?: {
+    conversationId?: string;
     providerId?: ProviderId;
     sessionId?: string;
     selectedModel?: string;
     linkedContentPath?: string;
+    title?: string;
+    createdAt?: number;
+    lastActivityAt?: number;
+    providerState?: Record<string, unknown>;
   }): Promise<Conversation> {
     const conversation = await this.deps.repository.create(options);
     this.notifyConversationListChanged();
