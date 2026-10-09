@@ -1,12 +1,16 @@
 import type { App, TAbstractFile } from 'obsidian';
 import { TFile, TFolder } from 'obsidian';
 
+import { resolveLinkedFolder } from '@/core/path/ResolveLinkedFolder';
+
 export type LinkedContentKind = 'file' | 'folder' | 'missing';
 
 export interface LinkedContentPresentation {
   readonly path: string;
   readonly kind: LinkedContentKind;
   readonly label: string;
+  /** Project folder: the folder itself, a file's parent, or '' for the vault root. */
+  readonly folder: string;
   readonly icon: string;
   readonly missing: boolean;
   readonly target: TAbstractFile | null;
@@ -38,9 +42,11 @@ export function deriveLinkedContentPresentation(
   path: string,
 ): LinkedContentPresentation {
   const target = app.vault.getAbstractFileByPath(path);
+  const folder = resolveLinkedFolder(path, createVaultLinkedContentIsFolder(app));
   if (target instanceof TFile) {
     return {
       path,
+      folder,
       kind: 'file',
       label: fileLabel(target),
       icon: target.extension.toLocaleLowerCase() === 'md' ? 'file-text' : 'file',
@@ -51,6 +57,7 @@ export function deriveLinkedContentPresentation(
   if (target instanceof TFolder) {
     return {
       path,
+      folder,
       kind: 'folder',
       label: target.name,
       icon: 'folder',
@@ -60,6 +67,7 @@ export function deriveLinkedContentPresentation(
   }
   return {
     path,
+    folder,
     kind: 'missing',
     label: finalPathSegment(path),
     icon: 'file-question',

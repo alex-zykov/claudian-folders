@@ -289,7 +289,8 @@ describe('LinkedContentController DOM', () => {
     let item = rowEl.querySelector('.claudian-input-info-linked')!;
     expect(item.querySelector('.claudian-input-info-linked-remove')).not.toBeNull();
     const noteButton = item.querySelector('.claudian-input-info-linked-main');
-    expect(noteButton?.getAttribute('aria-label')).toBe('Linked content: Notes/Plan.md');
+    expect(noteButton?.getAttribute('aria-label')).toBe('Linked content: Notes/Plan.md. Folder: Notes');
+    expect(noteButton?.querySelector('.claudian-input-info-linked-detail')?.textContent).toBe('Notes');
     expect(noteButton?.getAttribute('title')).toBeNull();
     noteButton?.click();
     await flushPromises();
@@ -309,7 +310,7 @@ describe('LinkedContentController DOM', () => {
     expect(item.querySelector('.claudian-input-info-linked-label')?.textContent)
       .toContain('Missing content');
     expect(item.querySelector('.claudian-input-info-linked-main')?.getAttribute('aria-label'))
-      .toBe('Linked content: Missing/Plan.md. Missing content');
+      .toBe('Linked content: Missing/Plan.md. Missing content. Folder: Missing');
     item.querySelector('.claudian-input-info-linked-main')?.click();
     expect(Notice).toHaveBeenCalledWith('Linked content is missing: Missing/Plan.md');
   });

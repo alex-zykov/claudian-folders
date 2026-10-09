@@ -2,7 +2,10 @@ import type { App } from 'obsidian';
 import { TFile, TFolder } from 'obsidian';
 
 import { resolveLinkedFolder } from '@/core/path/ResolveLinkedFolder';
-import { createVaultLinkedContentIsFolder } from '@/features/chat/linked-content/LinkedContentPresentation';
+import {
+  createVaultLinkedContentIsFolder,
+  deriveLinkedContentPresentation,
+} from '@/features/chat/linked-content/LinkedContentPresentation';
 
 function createFile(path: string): TFile {
   const file = new TFile();
@@ -44,5 +47,24 @@ describe('createVaultLinkedContentIsFolder', () => {
     expect(resolveLinkedFolder('Projects/A', isFolder)).toBe('Projects/A');
     expect(resolveLinkedFolder('Projects/A/x.md', isFolder)).toBe('Projects/A');
     expect(resolveLinkedFolder(undefined, isFolder)).toBe('');
+  });
+});
+
+describe('deriveLinkedContentPresentation folder', () => {
+  const app = createApp([
+    createFolder('Projects'),
+    createFolder('Projects/A'),
+    createFile('Projects/A/x.md'),
+    createFile('Inbox.md'),
+  ]);
+
+  it.each([
+    ['Projects/A/x.md', 'Projects/A'],
+    ['Inbox.md', ''],
+    ['Projects/A', 'Projects/A'],
+    ['Projects', 'Projects'],
+    ['Projects/A/gone.md', 'Projects/A'],
+  ])('derives the project folder of %s as %j', (path, folder) => {
+    expect(deriveLinkedContentPresentation(app, path).folder).toBe(folder);
   });
 });
