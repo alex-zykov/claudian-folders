@@ -1,5 +1,6 @@
 import { testClock } from '@test/helpers/testClock';
 
+import { resolveLinkedFolder } from '@/core/path/ResolveLinkedFolder';
 import type { ConversationMeta } from '@/core/types';
 import {
   deriveSessionListModel,
@@ -62,12 +63,22 @@ describe('SessionListOrganizer', () => {
     });
 
     expect(sections).toHaveLength(2);
-    expect(sections[0]).toMatchObject({ kind: 'ungrouped', label: 'Unlinked' });
+    expect(sections[0]).toMatchObject({ kind: 'ungrouped', label: 'Vault root' });
     expect(sections[0].conversations.map(conversation => conversation.id)).toEqual([
       'provisional',
       'unlinked',
     ]);
     expect(sections[1]).toMatchObject({ kind: 'content', contentPath: 'Notes/Real note.md' });
+
+    const unlinked = sections[0].conversations.find(conversation => conversation.id === 'unlinked');
+    expect(unlinked).toBeDefined();
+    expect(resolveLinkedFolder(unlinked!.linkedContentPath, () => undefined)).toBe('');
+  });
+
+  it('treats a blank vault-root draft as folder ""', () => {
+    const draft = createConversation('draft');
+    expect(draft.linkedContentPath).toBeUndefined();
+    expect(resolveLinkedFolder(draft.linkedContentPath, () => undefined)).toBe('');
   });
 
   it('does not suppress existing folders or non-Note files with provisional names', () => {

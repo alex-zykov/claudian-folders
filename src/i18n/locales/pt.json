@@ -128,6 +128,14 @@
       "name": "Gerar automaticamente títulos de conversa",
       "desc": "Gera automaticamente títulos de conversa após a primeira mensagem do usuário."
     },
+    "writeHistoryFile": {
+      "name": "Write history file into linked folder",
+      "desc": "After each turn, create or update a generated .chat.md file in the conversation's linked folder. Turning this on backfills existing chats."
+    },
+    "autoSwitchContext": {
+      "name": "Auto-switch context",
+      "desc": "When the active note changes, open the most recent chat for that note's folder or nearest ancestor. Never creates a chat."
+    },
     "titleLanguage": {
       "name": "Idioma de geração de títulos",
       "desc": "Idioma usado para títulos de conversa gerados automaticamente.",

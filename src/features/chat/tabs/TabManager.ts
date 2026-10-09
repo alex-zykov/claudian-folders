@@ -1023,6 +1023,7 @@ export class TabManager implements TabManagerInterface {
     conversationId: string,
     options: OpenConversationOptions = {},
   ): Promise<void> {
+    if (!options.automatic) this.callbacks.onManualConversationOpen?.();
     await this.navigation.open(conversationId, options, null);
   }
 

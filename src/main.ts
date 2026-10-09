@@ -20,6 +20,7 @@ import type { SettingsCoordinator } from './app/settings/SettingsCoordinator';
 import { startApplication } from './app/startup/ApplicationStartup';
 import type { SharedStorageService } from './app/storage/SharedStorageService';
 import { AgentSkillResources } from './composition/AgentSkillResources';
+import { ChatHistoryFileSubsystem } from './composition/ChatHistoryFileSubsystem';
 import { ClaudianChatFeatureHost, ClaudianFeatureHost } from './composition/ClaudianFeatureHosts';
 import { ClaudianProviderHost } from './composition/ClaudianProviderHost';
 import { ClaudianViews, isClaudianView } from './composition/ClaudianViews';
@@ -59,6 +60,7 @@ export default class ClaudianPlugin extends Plugin {
   private inactiveSessionArchiver!: InactiveSessionArchiver;
   private conversationLifecycle!: ConversationLifecycle;
   private vaultContentEvents!: VaultContentEvents;
+  private chatHistoryFiles!: ChatHistoryFileSubsystem;
   private settingsTab: ClaudianSettingTab | null = null;
   private readonly views = new ClaudianViews(
     this.app.workspace,
@@ -108,6 +110,7 @@ export default class ClaudianPlugin extends Plugin {
         registerEvent: eventRef => this.registerEvent(eventRef),
       });
       this.vaultContentEvents.register(eventRef => this.registerEvent(eventRef));
+      this.chatHistoryFiles.register(eventRef => this.registerEvent(eventRef));
 
       this.addRibbonIcon('bot', 'Open Claudian', () => {
         void this.views.activateView();
@@ -118,6 +121,21 @@ export default class ClaudianPlugin extends Plugin {
         name: 'Open chat view',
         callback: () => {
           void this.views.activateView();
+        },
+      });
+
+      this.addCommand({
+        id: 'open-chat-file-as-markdown',
+        name: 'Open chat file as Markdown',
+        checkCallback: (checking) => {
+          const file = this.app.workspace.getActiveFile();
+          const isChat = !!file
+            && this.app.metadataCache.getFileCache(file)?.frontmatter?.['claudian-chat'] === true;
+          if (!isChat) return false;
+          if (!checking) {
+            void this.chatHistoryFiles.openHandler.openActiveChatFileAsMarkdown();
+          }
+          return true;
         },
       });
 
@@ -172,6 +190,7 @@ export default class ClaudianPlugin extends Plugin {
     // Return any zen presentation to its view before asynchronous shutdown.
     this.zenMode.dispose();
     this.vaultContentEvents?.dispose();
+    this.chatHistoryFiles?.dispose();
     this.inactiveSessionArchiver?.dispose();
     this.startupMaintenanceAbort.abort();
     if (this.sessionInputCleanupTimer !== null) {
@@ -194,9 +213,21 @@ export default class ClaudianPlugin extends Plugin {
       deferNonRestoredSessionMetadata: true,
       isChatView: isClaudianView,
       isUnloading: () => this.isUnloading,
-      publishCommittedSettings: async (settings, previous) => this.chatViews.publishSettings(settings, previous),
+      publishCommittedSettings: async (settings, previous) => {
+        this.chatViews.publishSettings(settings, previous);
+        this.chatHistoryFiles?.onSettingsCommitted(settings, previous);
+      },
       // No chat view can hold tabs before loading completes and assigns the lifecycle.
-      onConversationDeleted: conversationId => this.conversationLifecycle.resetDeletedConversationTabs(conversationId),
+      onConversationDeleted: async (conversationId) => {
+        if (this.chatHistoryFiles) {
+          await this.chatHistoryFiles.onConversationDeleted(
+            conversationId,
+            () => this.conversationLifecycle.resetDeletedConversationTabs(conversationId),
+          );
+          return;
+        }
+        await this.conversationLifecycle.resetDeletedConversationTabs(conversationId);
+      },
       onConversationListChanged: () => this.chatViews.notifyConversationListChanged(),
       onAllMetadataLoaded: () => this.inactiveSessionArchiver.request(),
       ensureProviderWorkspace: providerId => (
@@ -259,10 +290,21 @@ export default class ClaudianPlugin extends Plugin {
       conversations: domains.conversations,
       views: this.views,
     });
+    this.chatHistoryFiles = ChatHistoryFileSubsystem.create({
+      app: this.app,
+      storage: domains.storage,
+      conversations: domains.conversations,
+      views: this.views,
+      isWriteHistoryFileEnabled: () => this.settings.writeHistoryFile === true,
+      reportError: () => {
+        new Notice('Chat history file operation failed');
+      },
+    });
     this.vaultContentEvents = new VaultContentEvents({
       vault: this.app.vault,
       views: this.views,
       conversations: domains.conversations,
+      historyFiles: this.chatHistoryFiles.writer,
       notifyConversationListChanged: () => this.chatViews.notifyConversationListChanged(),
     });
     this.chatHost = new ClaudianChatFeatureHost({
@@ -273,6 +315,7 @@ export default class ClaudianPlugin extends Plugin {
       sessionSnapshots: this.sessionSnapshots,
       tabWorkspaceMigration: domains.tabWorkspaceMigration,
       zenMode: this.zenMode,
+      chatHistoryFiles: this.chatHistoryFiles.writer,
     });
     this.inactiveSessionArchiver = new InactiveSessionArchiver(this.chatHost);
   }
