@@ -81,9 +81,9 @@ describe('ChatFileOpenHandler', () => {
 
   it('forwards ordinary setViewState with the calling leaf as this', async () => {
     const note = createFile('Projects/A/x.md');
-    let receivedThis: unknown;
+    const received: WorkspaceLeaf[] = [];
     const original = jest.fn(async function (this: WorkspaceLeaf) {
-      receivedThis = this;
+      received.push(this);
     });
     const previous = ObsidianWorkspaceLeaf.prototype.setViewState;
     ObsidianWorkspaceLeaf.prototype.setViewState = original;
@@ -103,7 +103,7 @@ describe('ChatFileOpenHandler', () => {
     handler.install();
     await leaf.setViewState({ type: 'markdown', state: { file: note.path }, active: true });
     expect(original).toHaveBeenCalled();
-    expect(receivedThis).toBe(leaf);
+    expect(received).toEqual([leaf]);
     handler.uninstall();
     ObsidianWorkspaceLeaf.prototype.setViewState = previous;
   });

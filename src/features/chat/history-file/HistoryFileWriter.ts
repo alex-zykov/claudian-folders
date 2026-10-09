@@ -52,10 +52,8 @@ export class HistoryFileWriter {
       const id = readChatFileId(cache?.frontmatter);
       if (!id) continue;
       this.#pathByConversationId.set(id, file.path);
-      const title = cache?.frontmatter?.title;
-      if (typeof title === 'string') {
-        this.#titleByConversationId.set(id, title);
-      }
+      const seededTitle = readChatFileTitle(cache?.frontmatter);
+      if (seededTitle) this.#titleByConversationId.set(id, seededTitle);
     }
   }
 
@@ -296,6 +294,13 @@ export function readChatFileId(frontmatter: Record<string, unknown> | undefined)
   if (!frontmatter || frontmatter['claudian-chat'] !== true) return undefined;
   return typeof frontmatter.id === 'string' && frontmatter.id.length > 0
     ? frontmatter.id
+    : undefined;
+}
+
+export function readChatFileTitle(frontmatter: Record<string, unknown> | undefined): string | undefined {
+  if (!frontmatter || frontmatter['claudian-chat'] !== true) return undefined;
+  return typeof frontmatter.title === 'string' && frontmatter.title.length > 0
+    ? frontmatter.title
     : undefined;
 }
 
