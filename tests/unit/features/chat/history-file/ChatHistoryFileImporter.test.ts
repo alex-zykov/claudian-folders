@@ -76,6 +76,7 @@ describe('ChatHistoryFileImporter', () => {
         imported.push(record.id);
         return { id: record.id } as Conversation;
       },
+      reportError: jest.fn(),
     });
 
     importer.scheduleScan();
@@ -111,6 +112,7 @@ describe('ChatHistoryFileImporter', () => {
       hasAnyMetadata: async () => false,
       hasTombstone: async () => true,
       importConversation,
+      reportError: jest.fn(),
     });
     tombstoned.scheduleScan();
     await new Promise(resolve => window.setTimeout(resolve, 0));
@@ -121,9 +123,81 @@ describe('ChatHistoryFileImporter', () => {
       hasAnyMetadata: async () => true,
       hasTombstone: async () => false,
       importConversation,
+      reportError: jest.fn(),
     });
     known.scheduleScan();
     await new Promise(resolve => window.setTimeout(resolve, 0));
     expect(importConversation).not.toHaveBeenCalled();
+  });
+  it('keeps importing later chat files after one file fails', async () => {
+    const broken = createFile('Projects/A/Broken.chat.md');
+    const healthy = createFile('Projects/A/Healthy.chat.md');
+    const frontmatterById: Record<string, Record<string, unknown>> = {
+      [broken.path]: {
+        'claudian-chat': true, id: 'broken-1', provider: 'not-registered', title: 'Broken',
+        created: CREATED, updated: UPDATED,
+      },
+      [healthy.path]: {
+        'claudian-chat': true, id: 'healthy-1', provider: 'claude', title: 'Healthy',
+        created: CREATED, updated: UPDATED,
+      },
+    };
+    const app = {
+      vault: { getMarkdownFiles: () => [broken, healthy] },
+      metadataCache: { getFileCache: (file: TFile) => ({ frontmatter: frontmatterById[file.path] }) },
+    } as unknown as App;
+    const imported: string[] = [];
+    const reportError = jest.fn();
+
+    const importer = new ChatHistoryFileImporter({
+      app,
+      hasAnyMetadata: async () => false,
+      hasTombstone: async () => false,
+      importConversation: async (record) => {
+        if (record.id === 'broken-1') throw new Error('Unknown provider');
+        imported.push(record.id);
+        return { id: record.id } as Conversation;
+      },
+      reportError,
+    });
+    importer.scheduleScan();
+    await new Promise(resolve => window.setTimeout(resolve, 0));
+
+    expect(imported).toEqual(['healthy-1']);
+    expect(reportError).toHaveBeenCalledTimes(1);
+  });
+
+  it('imports only the changed chat file instead of rescanning the vault', async () => {
+    const changed = createFile('Projects/A/Changed.chat.md');
+    const other = createFile('Projects/A/Other.chat.md');
+    const getMarkdownFiles = jest.fn(() => [changed, other]);
+    const frontmatterFor = (id: string) => ({
+      'claudian-chat': true, id, provider: 'claude', title: id, created: CREATED, updated: UPDATED,
+    });
+    const app = {
+      vault: { getMarkdownFiles },
+      metadataCache: {
+        getFileCache: (file: TFile) => ({
+          frontmatter: frontmatterFor(file === changed ? 'changed-1' : 'other-1'),
+        }),
+      },
+    } as unknown as App;
+    const imported: string[] = [];
+
+    const importer = new ChatHistoryFileImporter({
+      app,
+      hasAnyMetadata: async () => false,
+      hasTombstone: async () => false,
+      importConversation: async (record) => {
+        imported.push(record.id);
+        return { id: record.id } as Conversation;
+      },
+      reportError: jest.fn(),
+    });
+    importer.handleFileChanged(changed);
+    await new Promise(resolve => window.setTimeout(resolve, 0));
+
+    expect(imported).toEqual(['changed-1']);
+    expect(getMarkdownFiles).not.toHaveBeenCalled();
   });
 });

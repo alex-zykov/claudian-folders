@@ -3,6 +3,7 @@ import '@/providers';
 
 import { deserialize, serialize } from 'node:v8';
 
+import { NOOP_CHAT_HISTORY_FILES } from '@test/helpers/features/chat/noopChatHistoryFiles';
 import { createHarness, releaseSideChatHarnesses } from '@test/helpers/features/chat/SideChatDOMHarness';
 import { FakeSideSession } from '@test/helpers/features/chat/SideChatSessionHarness';
 import { modelCatalogCases } from '@test/helpers/providerModelCatalogs';
@@ -20,7 +21,6 @@ import type { ProviderId } from '@/core/providers/types';
 import type { ClaudianSettings, Conversation } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
 import { getChatSettingsSnapshot } from '@/features/chat/ChatSettings';
-import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { destroyTab } from '@/features/chat/tabs/TabLifecycle';
 import { updateTabProviderSettings } from '@/features/chat/tabs/tabProviderSettings';
 import { refreshTabProviderUI } from '@/features/chat/tabs/tabProviderUI';

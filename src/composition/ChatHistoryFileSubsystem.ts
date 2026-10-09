@@ -20,6 +20,7 @@ export interface ChatHistoryFileSubsystemDeps {
   readonly conversations: ConversationService;
   readonly views: ClaudianViews;
   isWriteHistoryFileEnabled(): boolean;
+  reportError(error: unknown): void;
 }
 
 /**
@@ -36,6 +37,7 @@ export class ChatHistoryFileSubsystem {
     writer: HistoryFileWriter,
     importer: ChatHistoryFileImporter,
     openHandler: ChatFileOpenHandler,
+    private readonly deps: ChatHistoryFileSubsystemDeps,
   ) {
     this.writer = writer;
     this.importer = importer;
@@ -50,6 +52,7 @@ export class ChatHistoryFileSubsystem {
         ?? deps.conversations.getConversationSync(id),
       hydrateConversation: id => deps.conversations.getConversationById(id),
       listConversationMeta: () => deps.conversations.getConversationList(),
+      reportError: error => deps.reportError(error),
     });
     writer.seedFromMetadataCache();
 
@@ -74,6 +77,7 @@ export class ChatHistoryFileSubsystem {
         );
       },
       importConversation: record => deps.conversations.importFromHistoryFile(record),
+      reportError: error => deps.reportError(error),
     });
 
     const openHandler = new ChatFileOpenHandler({
@@ -85,16 +89,15 @@ export class ChatHistoryFileSubsystem {
         const manager = view?.getTabManager();
         if (manager) await manager.openConversation(id);
       },
+      hasConversation: id => deps.conversations.hasLiveConversation(id),
       findConversationAcrossViews: id => deps.views.findConversationAcrossViews(id),
     });
 
-    return new ChatHistoryFileSubsystem(writer, importer, openHandler);
+    return new ChatHistoryFileSubsystem(writer, importer, openHandler, deps);
   }
 
-  register(
-    app: App,
-    registerEvent: (eventRef: EventRef) => void,
-  ): void {
+  register(registerEvent: (eventRef: EventRef) => void): void {
+    const { app } = this.deps;
     this.openHandler.install();
     this.importer.scheduleScan();
     if (typeof app.vault?.on === 'function') {
@@ -129,8 +132,9 @@ export class ChatHistoryFileSubsystem {
   ): Promise<void> {
     try {
       await this.writer.trashForConversation(conversationId);
-    } catch {
+    } catch (error) {
       // Trash failure must not skip tab reset.
+      this.deps.reportError(error);
     }
     await resetTabs();
   }

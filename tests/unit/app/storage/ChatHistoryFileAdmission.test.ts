@@ -33,10 +33,14 @@ describe('ChatHistoryFileAdmission', () => {
     expect(listFolders).toHaveBeenCalledWith('.claudian/sessions/devices');
   });
 
-  it('returns an empty list when the devices folder is missing', async () => {
+  it('returns an empty list when the devices folder holds no device folders', async () => {
+    await expect(listDeviceSessionFolders(async () => [])).resolves.toEqual([]);
+  });
+
+  it('fails closed when the devices folder cannot be listed', async () => {
     const listFolders = jest.fn(async () => {
-      throw new Error('missing');
+      throw new Error('EACCES');
     });
-    await expect(listDeviceSessionFolders(listFolders)).resolves.toEqual([]);
+    await expect(listDeviceSessionFolders(listFolders)).rejects.toThrow('EACCES');
   });
 });

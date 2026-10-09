@@ -161,6 +161,7 @@ describe('HistoryFileWriter', () => {
       getConversation: (id) => (id === conversation.id ? conversation : null),
       hydrateConversation: async (id) => (id === conversation.id ? conversation : null),
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
 
     writer.scheduleWrite(conversation.id);
@@ -198,6 +199,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
 
     writer.scheduleWrite(conversation.id);
@@ -231,6 +233,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
     writer.scheduleWrite(conversation.id);
     await flushQueues();
@@ -256,6 +259,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [meta],
+      reportError: jest.fn(),
     });
 
     writer.startBackfill();
@@ -274,6 +278,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
 
     writer.scheduleWrite(conversation.id);
@@ -295,6 +300,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
     writer.scheduleWrite(conversation.id);
     await flushQueues();
@@ -317,6 +323,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
     writer.scheduleWrite(conversation.id);
     await flushQueues();
@@ -348,6 +355,7 @@ describe('HistoryFileWriter', () => {
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError: jest.fn(),
     });
     writer.seedFromMetadataCache();
 
@@ -360,19 +368,23 @@ describe('HistoryFileWriter', () => {
     expect(harness.contents.has(existingPath)).toBe(false);
   });
 
-  it('swallows write errors from scheduleWrite without rejecting', async () => {
+  it('reports write errors from scheduleWrite without rejecting', async () => {
     const harness = createVaultHarness([createFolder('Projects/A'), createFile('Projects/A/x.md')]);
-    (harness.app.vault.create as jest.Mock).mockRejectedValueOnce(new Error('exists'));
+    const failure = new Error('exists');
+    (harness.app.vault.create as jest.Mock).mockRejectedValueOnce(failure);
     const conversation = createConversation();
+    const reportError = jest.fn();
     const writer = new HistoryFileWriter({
       app: harness.app,
       isEnabled: () => true,
       getConversation: () => conversation,
       hydrateConversation: async () => conversation,
       listConversationMeta: () => [],
+      reportError,
     });
     expect(() => writer.scheduleWrite(conversation.id)).not.toThrow();
     await flushQueues();
+    expect(reportError).toHaveBeenCalledWith(failure);
   });
 });
 

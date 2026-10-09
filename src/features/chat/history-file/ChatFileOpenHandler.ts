@@ -7,6 +7,7 @@ export interface ChatFileOpenHandlerDeps {
   readonly app: App;
   activateView(): Promise<void>;
   openConversation(id: string): Promise<void>;
+  hasConversation(id: string): boolean;
   findConversationAcrossViews(
     conversationId: string,
   ): { view: { getTabManager(): { openConversation(id: string): Promise<void> } | null } } | null;
@@ -107,17 +108,20 @@ export class ChatFileOpenHandler {
     );
     if (!id) return false;
 
-    await this.#deps.activateView();
-    const existing = this.#deps.findConversationAcrossViews(id);
-    if (existing) {
-      const manager = existing.view.getTabManager();
+    // An unknown or failing chat keeps the markdown view so the file stays reachable.
+    if (!this.#deps.hasConversation(id)) return false;
+    try {
+      await this.#deps.activateView();
+      const manager = this.#deps.findConversationAcrossViews(id)?.view.getTabManager();
       if (manager) {
         await manager.openConversation(id);
-        return true;
+      } else {
+        await this.#deps.openConversation(id);
       }
+      return true;
+    } catch {
+      return false;
     }
-    await this.#deps.openConversation(id);
-    return true;
   }
 
   #isChatFile(file: TFile): boolean {

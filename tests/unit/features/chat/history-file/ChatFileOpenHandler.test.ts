@@ -52,6 +52,7 @@ describe('ChatFileOpenHandler', () => {
       app,
       activateView,
       openConversation,
+      hasConversation: () => true,
       findConversationAcrossViews: () => null,
     });
     handler.install();
@@ -98,6 +99,7 @@ describe('ChatFileOpenHandler', () => {
       app,
       activateView: jest.fn(async () => undefined),
       openConversation: jest.fn(async () => undefined),
+      hasConversation: () => true,
       findConversationAcrossViews: () => null,
     });
     handler.install();
@@ -124,11 +126,48 @@ describe('ChatFileOpenHandler', () => {
       app,
       activateView: jest.fn(async () => undefined),
       openConversation: jest.fn(async () => undefined),
+      hasConversation: () => true,
       findConversationAcrossViews: () => null,
     });
     handler.install();
     await leaf.setViewState({ type: 'markdown', state: { file: note.path }, active: true });
     expect(original).toHaveBeenCalled();
+    handler.uninstall();
+    ObsidianWorkspaceLeaf.prototype.setViewState = previous;
+  });
+  it.each([
+    ['unknown conversation', { hasConversation: () => false, openConversation: jest.fn(async () => undefined) }],
+    ['failed open', {
+      hasConversation: () => true,
+      openConversation: jest.fn(async () => { throw new Error('open failed'); }),
+    }],
+  ])('keeps the markdown view when routing fails (%s)', async (_label, deps) => {
+    const chatFile = createFile('Projects/A/Plan.chat.md');
+    const original = jest.fn(async () => undefined);
+    const detach = jest.fn();
+    const previous = ObsidianWorkspaceLeaf.prototype.setViewState;
+    ObsidianWorkspaceLeaf.prototype.setViewState = original;
+    const leaf = Object.create(ObsidianWorkspaceLeaf.prototype) as WorkspaceLeaf;
+    Object.assign(leaf, { detach });
+    const app = {
+      vault: { getAbstractFileByPath: () => chatFile },
+      metadataCache: {
+        getFileCache: () => ({ frontmatter: { 'claudian-chat': true, id: 'conv-missing' } }),
+      },
+      workspace: { getLeaf: () => leaf, getMostRecentLeaf: () => leaf, getActiveFile: () => chatFile },
+    } as unknown as App;
+
+    const handler = new ChatFileOpenHandler({
+      app,
+      activateView: jest.fn(async () => undefined),
+      findConversationAcrossViews: () => null,
+      ...deps,
+    });
+    handler.install();
+    await leaf.setViewState({ type: 'markdown', state: { file: chatFile.path }, active: true });
+
+    expect(original).toHaveBeenCalledTimes(1);
+    expect(detach).not.toHaveBeenCalled();
     handler.uninstall();
     ObsidianWorkspaceLeaf.prototype.setViewState = previous;
   });

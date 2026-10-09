@@ -24,6 +24,8 @@ export interface ChatHistoryFileImporterDeps {
   hasTombstone(id: string): Promise<boolean>;
   /** Creates device-local metadata for an imported chat file without touching native history. */
   importConversation(record: ChatHistoryFileImportRecord): Promise<Conversation | null>;
+  /** Surfaces a failed file import; the scan continues with the remaining files. */
+  reportError(error: unknown): void;
 }
 
 /**
@@ -41,20 +43,22 @@ export class ChatHistoryFileImporter {
   }
 
   scheduleScan(): void {
-    if (this.#disposed) return;
-    this.#scanTail = this.#scanTail
-      .catch(() => undefined)
-      .then(() => this.#scan());
+    this.#enqueue(() => this.#scan());
   }
 
   handleFileChanged(file: TAbstractFile): void {
     if (!(file instanceof ObsidianTFile)) return;
     if (file.extension.toLocaleLowerCase() !== 'md') return;
-    this.scheduleScan();
+    this.#enqueue(() => this.#importFileSafely(file));
   }
 
   dispose(): void {
     this.#disposed = true;
+  }
+
+  #enqueue(task: () => Promise<void>): void {
+    if (this.#disposed) return;
+    this.#scanTail = this.#scanTail.then(task);
   }
 
   async #scan(): Promise<void> {
@@ -64,7 +68,16 @@ export class ChatHistoryFileImporter {
       : [];
     for (const file of files) {
       if (this.#disposed) return;
+      await this.#importFileSafely(file);
+    }
+  }
+
+  async #importFileSafely(file: TFile): Promise<void> {
+    if (this.#disposed) return;
+    try {
       await this.#importFile(file);
+    } catch (error) {
+      this.#deps.reportError(error);
     }
   }
 

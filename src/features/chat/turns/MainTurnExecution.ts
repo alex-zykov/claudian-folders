@@ -347,7 +347,7 @@ export class MainTurnExecution {
           const saveExtras = didEnqueueToSdk ? { resumeAtMessageId: undefined } : undefined;
           await conversationController.save(true, saveExtras);
           const persistedId = state.currentConversationId;
-          if (persistedId) this.deps.plugin.chatHistoryFiles?.scheduleWrite(persistedId);
+          if (persistedId) this.deps.plugin.chatHistoryFiles.scheduleWrite(persistedId);
           const userMsgIndex = state.messages.indexOf(userMsg);
           renderer.refreshActionButtons(userMsg, state.messages, userMsgIndex >= 0 ? userMsgIndex : undefined);
           scheduledContinuation = this.deps.queue.scheduleContinuation();

@@ -65,9 +65,6 @@ export class ConversationService {
     return this.deps.repository.hasLiveConversation(id);
   }
 
-  blocksHistoryFileImport(id: string): boolean {
-    return this.deps.repository.blocksHistoryFileImport(id);
-  }
 
   switchConversation(id: string): Promise<Conversation | null> {
     return this.deps.repository.switchTo(id);

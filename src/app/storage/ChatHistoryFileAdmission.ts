@@ -31,18 +31,17 @@ export async function hasAnySessionMetadata(
   return false;
 }
 
-/** Lists device session folders via adapter.listFolders (not listFiles). */
+/**
+ * Lists device session folders via adapter.listFolders (not listFiles). A listing failure
+ * propagates: admission fails closed instead of treating unreadable layers as empty.
+ */
 export async function listDeviceSessionFolders(
   listFolders: (path: string) => Promise<readonly string[]>,
 ): Promise<string[]> {
-  try {
-    const entries = await listFolders(DEVICE_SESSIONS_PATH);
-    return entries.map(entry => (
-      entry.startsWith(`${DEVICE_SESSIONS_PATH}/`)
-        ? entry
-        : `${DEVICE_SESSIONS_PATH}/${entry}`
-    ));
-  } catch {
-    return [];
-  }
+  const entries = await listFolders(DEVICE_SESSIONS_PATH);
+  return entries.map(entry => (
+    entry.startsWith(`${DEVICE_SESSIONS_PATH}/`)
+      ? entry
+      : `${DEVICE_SESSIONS_PATH}/${entry}`
+  ));
 }

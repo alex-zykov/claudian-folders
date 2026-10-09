@@ -22,6 +22,8 @@ export interface HistoryFileWriterDeps {
   getConversation: (id: string) => Conversation | null;
   hydrateConversation: (id: string) => Promise<Conversation | null>;
   listConversationMeta: () => readonly ConversationMeta[];
+  /** Surfaces a failed background write; the queue keeps serving later turns. */
+  reportError: (error: unknown) => void;
 }
 
 /**
@@ -60,7 +62,7 @@ export class HistoryFileWriter {
   scheduleWrite(conversationId: string): void {
     if (this.#disposed || !this.#deps.isEnabled()) return;
     void this.#enqueue(conversationId, () => this.#writeConversation(conversationId))
-      .catch(() => undefined);
+      .catch(error => this.#deps.reportError(error));
   }
 
   async trashForConversation(conversationId: string): Promise<void> {

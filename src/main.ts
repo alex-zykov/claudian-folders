@@ -110,7 +110,7 @@ export default class ClaudianPlugin extends Plugin {
         registerEvent: eventRef => this.registerEvent(eventRef),
       });
       this.vaultContentEvents.register(eventRef => this.registerEvent(eventRef));
-      this.chatHistoryFiles.register(this.app, eventRef => this.registerEvent(eventRef));
+      this.chatHistoryFiles.register(eventRef => this.registerEvent(eventRef));
 
       this.addRibbonIcon('bot', 'Open Claudian', () => {
         void this.views.activateView();
@@ -296,6 +296,9 @@ export default class ClaudianPlugin extends Plugin {
       conversations: domains.conversations,
       views: this.views,
       isWriteHistoryFileEnabled: () => this.settings.writeHistoryFile === true,
+      reportError: () => {
+        new Notice('Chat history file operation failed');
+      },
     });
     this.vaultContentEvents = new VaultContentEvents({
       vault: this.app.vault,

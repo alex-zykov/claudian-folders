@@ -9,6 +9,7 @@ import type { ClaudianSettings } from '@/core/types';
 describe('ChatHistoryFileSubsystem', () => {
   it('isolates trash failures so tab reset still runs', async () => {
     const resetTabs = jest.fn(async () => undefined);
+    const reportError = jest.fn();
     const app = {
       vault: { getMarkdownFiles: () => [] },
       metadataCache: { getFileCache: () => null },
@@ -27,7 +28,6 @@ describe('ChatHistoryFileSubsystem', () => {
       getConversationList: () => [],
       wasDeletedInSession: () => false,
       hasLiveConversation: () => false,
-      blocksHistoryFileImport: () => false,
       importFromHistoryFile: async () => null,
     } as unknown as ConversationService;
     const views = {
@@ -42,15 +42,19 @@ describe('ChatHistoryFileSubsystem', () => {
       conversations,
       views,
       isWriteHistoryFileEnabled: () => true,
+      reportError,
     });
-    jest.spyOn(subsystem.writer, 'trashForConversation').mockRejectedValue(new Error('trash failed'));
+    const failure = new Error('trash failed');
+    jest.spyOn(subsystem.writer, 'trashForConversation').mockRejectedValue(failure);
 
     await subsystem.onConversationDeleted('conv-1', resetTabs);
     expect(resetTabs).toHaveBeenCalledTimes(1);
+    expect(reportError).toHaveBeenCalledWith(failure);
     subsystem.dispose();
   });
 
   it('starts and cancels backfill from settings commits', () => {
+    const reportError = jest.fn();
     const app = {
       vault: { getMarkdownFiles: () => [] },
       metadataCache: { getFileCache: () => null },
@@ -69,7 +73,6 @@ describe('ChatHistoryFileSubsystem', () => {
       getConversationList: () => [],
       wasDeletedInSession: () => false,
       hasLiveConversation: () => false,
-      blocksHistoryFileImport: () => false,
       importFromHistoryFile: async () => null,
     } as unknown as ConversationService;
     const views = {
@@ -84,6 +87,7 @@ describe('ChatHistoryFileSubsystem', () => {
       conversations,
       views,
       isWriteHistoryFileEnabled: () => true,
+      reportError,
     });
     const start = jest.spyOn(subsystem.writer, 'startBackfill').mockImplementation(() => undefined);
     const cancel = jest.spyOn(subsystem.writer, 'cancelBackfill').mockImplementation(() => undefined);

@@ -1,8 +1,9 @@
 import '@/providers';
 
+import { NOOP_CHAT_HISTORY_FILES } from '@test/helpers/features/chat/noopChatHistoryFiles';
+
 import type { ClaudianSettings, UsageInfo } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
-import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { refreshTabContextUsage } from '@/features/chat/tabs/tabProviderUI';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
 

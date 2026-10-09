@@ -1,6 +1,7 @@
 import '@/providers';
 
 import { DEFAULT_CLAUDIAN_SETTINGS } from '@test/helpers/defaultSettings';
+import { NOOP_CHAT_HISTORY_FILES } from '@test/helpers/features/chat/noopChatHistoryFiles';
 import { FakeSideBackend, waitFor } from '@test/helpers/features/chat/SideChatSessionHarness';
 import { testDate } from '@test/helpers/testClock';
 
@@ -14,7 +15,6 @@ import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCo
 import type { Conversation, SessionMetadata } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
 import { ChatExecutionCoordinator } from '@/features/chat/execution/ChatExecutionCoordinator';
-import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { refreshTabContextUsage } from '@/features/chat/tabs/tabProviderUI';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
 
