@@ -174,6 +174,28 @@ describe('ClaudianView model refresh routing', () => {
   });
 });
 
+describe('ClaudianView navigation', () => {
+  it.each([
+    ['separate-tab', true],
+    ['in-claudian', false],
+    ['note', false],
+  ] as const)('is replaceable by the next opened file only for chat mode %s: %s', (mode, expected) => {
+    const view = createClaudianView({ plugin: { settings: { chatFileOpenMode: mode } } });
+
+    expect(view.navigation).toBe(expected);
+  });
+
+  it('follows the open-mode setting without reopening the view', () => {
+    const settings: { chatFileOpenMode: string } = { chatFileOpenMode: 'in-claudian' };
+    const view = createClaudianView({ plugin: { settings } });
+    expect(view.navigation).toBe(false);
+
+    settings.chatFileOpenMode = 'separate-tab';
+
+    expect(view.navigation).toBe(true);
+  });
+});
+
 describe('ClaudianView leaf title', () => {
   const summaries: Record<string, { title: string }> = { c1: { title: 'Plan review' } };
   const plugin = { getConversationSummary: (id: string) => summaries[id] ?? null };

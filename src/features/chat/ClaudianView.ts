@@ -121,6 +121,15 @@ export class ClaudianView extends ItemView implements ZenModeSource {
       writable: false,
       configurable: false,
     });
+
+    // Obsidian opens the next file in place of a leaf whose view is navigable, and in a new tab
+    // beside any other view. A chat that lives in its own tab behaves like a file in that tab;
+    // other placements stay static views. Read per click so the setting applies immediately.
+    Object.defineProperty(this, 'navigation', {
+      get: () => this.plugin.settings.chatFileOpenMode === 'separate-tab',
+      set: () => undefined,
+      configurable: true,
+    });
   }
 
   getViewType(): string {
