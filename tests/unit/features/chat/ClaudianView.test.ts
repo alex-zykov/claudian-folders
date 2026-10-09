@@ -112,6 +112,7 @@ const openedViews: any[] = [];
 /** Opens a real view over `manager` and delivers Obsidian state so the workspace initializes. */
 async function openView(options: {
   manager?: any;
+  leaf?: unknown;
   plugin?: Record<string, unknown>;
   width?: number;
   contentEl?: any;
@@ -119,7 +120,7 @@ async function openView(options: {
   const manager = options.manager ?? createFakeTabManager();
   installTabManager(manager);
   const contentEl = options.contentEl ?? createSizedContentEl(options.width ?? 400);
-  const view = createClaudianView({ plugin: createOpenablePlugin(options.plugin), contentEl });
+  const view = createClaudianView({ plugin: createOpenablePlugin(options.plugin), contentEl, leaf: options.leaf });
   openedViews.push(view);
   await view.onOpen();
   await view.setState({}, { history: false });
@@ -171,6 +172,34 @@ describe('ClaudianView model refresh routing', () => {
 
     expect(grokTab.refreshProviderControls).toHaveBeenCalledTimes(1);
     expect(tabManager.reconcileProviderAvailability).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ClaudianView context auto-switch', () => {
+  const note = { path: 'Projects/A/x.md', extension: 'md' };
+
+  async function fileChangeReachesChatList(placement: 'sidebar' | 'main') {
+    const sidebar = {};
+    const mainArea = {};
+    const getConversationList = jest.fn(() => []);
+    const { view } = await openView({
+      manager: createFakeTabManager({ getActiveTab: () => null }),
+      leaf: { getRoot: () => (placement === 'sidebar' ? sidebar : mainArea) },
+      plugin: {
+        getConversationList,
+        settings: { restoreTabsOnStartup: true, autoSwitchContext: true },
+      },
+    });
+    Object.assign(view.plugin.app.workspace, { leftSplit: {}, rightSplit: sidebar });
+
+    view.contextAutoSwitch.handleActiveFileChanged(note);
+
+    return getConversationList.mock.calls.length > 0;
+  }
+
+  it('switches chats on file changes only while Claudian lives in a sidebar', async () => {
+    await expect(fileChangeReachesChatList('sidebar')).resolves.toBe(true);
+    await expect(fileChangeReachesChatList('main')).resolves.toBe(false);
   });
 });
 

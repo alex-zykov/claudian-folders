@@ -143,6 +143,16 @@ export class ClaudianView extends ItemView implements ZenModeSource {
     return title || 'Claudian';
   }
 
+  /**
+   * Folder-based chat switching belongs to the sidebar chat, which follows the note being read.
+   * A chat in a main-area tab is a document of its own and must not change under the user.
+   */
+  private isInSidebar(): boolean {
+    const root = this.leaf.getRoot();
+    const { workspace } = this.plugin.app;
+    return root === workspace.leftSplit || root === workspace.rightSplit;
+  }
+
   /** Obsidian reads the display text only when the header is told to redraw. */
   private refreshLeafHeader(): void {
     (this.leaf as { updateHeader?: () => void }).updateHeader?.();
@@ -341,7 +351,7 @@ export class ClaudianView extends ItemView implements ZenModeSource {
     );
     this.contextAutoSwitch = new ChatContextAutoSwitch({
       app: this.plugin.app,
-      isEnabled: () => this.plugin.settings.autoSwitchContext === true,
+      isEnabled: () => this.plugin.settings.autoSwitchContext === true && this.isInSidebar(),
       isActiveTabStreaming: () => tabManager.getActiveTab()?.state.isStreaming === true,
       getConversationList: () => this.plugin.getConversationList(),
       getActiveConversationId: () => tabManager.getActiveTab()?.conversationId ?? null,
