@@ -567,8 +567,8 @@ describe('SessionBrowser', () => {
         expect(groupHeaders[1].getAttribute('title')).toBe('Projects/B/Plan.md');
         const groupIcons = container.querySelectorAll('.claudian-session-group-icon');
         expect(groupIcons).toHaveLength(3);
-        expect(setIcon).toHaveBeenCalledWith(groupIcons[0], 'link');
-        expect(setIcon).toHaveBeenCalledWith(groupIcons[1], 'link');
+        expect(setIcon).toHaveBeenCalledWith(groupIcons[0], 'folder');
+        expect(setIcon).toHaveBeenCalledWith(groupIcons[1], 'folder');
         expect(setIcon).toHaveBeenCalledWith(groupIcons[2], 'inbox');
         const linkedContentActions = container.querySelectorAll(
           '.claudian-session-group-new-action',
