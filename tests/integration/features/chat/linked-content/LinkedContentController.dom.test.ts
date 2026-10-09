@@ -152,6 +152,23 @@ describe('LinkedContentController DOM', () => {
     expect(focus).toHaveBeenCalled();
   });
 
+  it('shows the project folder under the selector and falls back to the vault root', () => {
+    const note = createFile('Notes/Plan.md');
+    const folder = createFolder('Projects');
+    const harness = createHarness({ entries: [note, folder] });
+    const welcomeEl = createWelcomeElement(createMockEl(), 'Good morning') as unknown as MockElement;
+    harness.controller.mountWelcome(welcomeEl as unknown as HTMLElement);
+    const folderText = () => welcomeEl.querySelector('.claudian-linked-content-folder')?.textContent;
+
+    expect(folderText()).toBe('Folder: Vault root');
+    harness.controller.selectExplicit(note.path);
+    expect(folderText()).toBe('Folder: Notes');
+    harness.controller.selectExplicit(folder.path);
+    expect(folderText()).toBe('Folder: Projects');
+    harness.controller.selectExplicit(null);
+    expect(folderText()).toBe('Folder: Vault root');
+  });
+
   it('closes the expanded picker with Escape from the picker boundary', () => {
     const harness = createHarness({ entries: [createFolder('Projects')] });
     const welcome = createWelcomeElement(createMockEl(), 'Hello') as unknown as MockElement;

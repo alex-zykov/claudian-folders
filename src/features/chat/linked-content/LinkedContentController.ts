@@ -380,6 +380,7 @@ export class LinkedContentController {
       label: presentation?.missing
         ? `${presentation.label} · Missing content`
         : presentation?.label ?? null,
+      folder: presentation?.folder ?? '',
     });
   }
 
