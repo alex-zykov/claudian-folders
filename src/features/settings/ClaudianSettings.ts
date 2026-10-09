@@ -6,11 +6,12 @@ import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
 import { ProviderWorkspaceRegistry } from '@/core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId, ProviderSettingsTabRenderHandle } from '@/core/providers/types';
-import type {
-  ChatViewPlacement,
-  ClaudianSettings,
-  DualPaneSide,
-  SessionAutoArchiveAfter,
+import {
+  CHAT_FILE_OPEN_MODES,
+  type ChatViewPlacement,
+  type ClaudianSettings,
+  type DualPaneSide,
+  type SessionAutoArchiveAfter,
 } from '@/core/types/settings';
 import { SkillsSettingsTab } from '@/features/agent-skills/SkillsSettingsTab';
 import type { FeatureHost } from '@/features/FeatureHost';
@@ -433,17 +434,20 @@ export class ClaudianSettingTab extends PluginSettingTab {
       );
 
     new Setting(container)
-      .setName(t('settings.openChatFilesInChat.name'))
-      .setDesc(t('settings.openChatFilesInChat.desc'))
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.host.settings.openChatFilesInChat ?? false)
-          .onChange(async (value) => {
-            await this.host.mutateSettings((settings) => {
-              settings.openChatFilesInChat = value;
-            });
-          })
-      );
+      .setName(t('settings.chatFileOpenMode.name'))
+      .setDesc(t('settings.chatFileOpenMode.desc'))
+      .addDropdown((dropdown) => {
+        dropdown.addOption('in-claudian', t('settings.chatFileOpenMode.options.inClaudian'));
+        dropdown.addOption('separate-tab', t('settings.chatFileOpenMode.options.separateTab'));
+        dropdown.addOption('note', t('settings.chatFileOpenMode.options.note'));
+        dropdown.setValue(this.host.settings.chatFileOpenMode ?? 'in-claudian');
+        dropdown.onChange(async (value) => {
+          await this.host.mutateSettings((settings) => {
+            settings.chatFileOpenMode = CHAT_FILE_OPEN_MODES.find(mode => mode === value)
+              ?? 'in-claudian';
+          });
+        });
+      });
 
     if (this.host.settings.enableAutoTitleGeneration) {
       new Setting(container)

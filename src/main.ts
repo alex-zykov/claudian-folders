@@ -124,28 +124,17 @@ export default class ClaudianPlugin extends Plugin {
         },
       });
 
-      this.addCommand({
-        id: 'open-chat-file-as-markdown',
-        name: 'Open chat file as Markdown',
-        checkCallback: (checking) => {
-          const file = this.app.workspace.getActiveFile();
-          const isChat = !!file
-            && this.app.metadataCache.getFileCache(file)?.frontmatter?.['claudian-chat'] === true;
-          if (!isChat) return false;
-          if (!checking) {
-            void this.chatHistoryFiles.openHandler.openActiveChatFileAsMarkdown();
-          }
-          return true;
-        },
-      });
-
       this.addCommand(createInlineEditCommand({
         host: this.featureHost,
         component: this,
         sessions: this.inlineEditSessions,
       }));
 
-      for (const command of createChatTabCommands({ workspace: this.app.workspace, views: this.views })) {
+      for (const command of createChatTabCommands({
+        workspace: this.app.workspace,
+        views: this.views,
+        openNewChatInSeparateTab: () => this.chatHistoryFiles.separateTabs.openNewChat(),
+      })) {
         this.addCommand(command);
       }
       this.addCommand(createChatFocusCommand(
@@ -296,7 +285,7 @@ export default class ClaudianPlugin extends Plugin {
       conversations: domains.conversations,
       views: this.views,
       isWriteHistoryFileEnabled: () => this.settings.writeHistoryFile === true,
-      isOpenChatFilesInChatEnabled: () => this.settings.openChatFilesInChat === true,
+      getChatFileOpenMode: () => this.settings.chatFileOpenMode,
       reportError: () => {
         new Notice('Chat history file operation failed');
       },
@@ -316,7 +305,7 @@ export default class ClaudianPlugin extends Plugin {
       sessionSnapshots: this.sessionSnapshots,
       tabWorkspaceMigration: domains.tabWorkspaceMigration,
       zenMode: this.zenMode,
-      chatHistoryFiles: this.chatHistoryFiles.writer,
+      chatHistoryFiles: this.chatHistoryFiles.port,
     });
     this.inactiveSessionArchiver = new InactiveSessionArchiver(this.chatHost);
   }

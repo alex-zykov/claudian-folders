@@ -16,6 +16,21 @@ import { createVaultLinkedContentIsFolder } from '@/features/chat/linked-content
 
 const BACKFILL_GAP_MS = 25;
 
+/** Frontmatter keys the writer owns; every other key is the user's and is left alone. */
+const OWNED_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
+  'claudian-chat',
+  'claudian-chat-version',
+  'id',
+  'provider',
+  'title',
+  'created',
+  'updated',
+  'linked',
+  'sessionId',
+  'forkSessionId',
+  'forkResumeAt',
+]);
+
 export interface HistoryFileWriterDeps {
   readonly app: App;
   isEnabled: () => boolean;
@@ -34,7 +49,6 @@ export class HistoryFileWriter {
   readonly #deps: HistoryFileWriterDeps;
   readonly #isFolder: (path: string) => boolean | undefined;
   readonly #pathByConversationId = new Map<string, string>();
-  readonly #titleByConversationId = new Map<string, string>();
   readonly #queues = new Map<string, Promise<void>>();
   #backfillAbort: AbortController | null = null;
   #disposed = false;
@@ -42,21 +56,6 @@ export class HistoryFileWriter {
   constructor(deps: HistoryFileWriterDeps) {
     this.#deps = deps;
     this.#isFolder = createVaultLinkedContentIsFolder(deps.app);
-  }
-
-  seedFromMetadataCache(): void {
-    const { vault } = this.#deps.app;
-    const files = typeof vault.getMarkdownFiles === 'function'
-      ? vault.getMarkdownFiles()
-      : [];
-    for (const file of files) {
-      const cache = this.#deps.app.metadataCache?.getFileCache?.(file);
-      const id = readChatFileId(cache?.frontmatter);
-      if (!id) continue;
-      this.#pathByConversationId.set(id, file.path);
-      const seededTitle = readChatFileTitle(cache?.frontmatter);
-      if (seededTitle) this.#titleByConversationId.set(id, seededTitle);
-    }
   }
 
   scheduleWrite(conversationId: string): void {
@@ -70,7 +69,6 @@ export class HistoryFileWriter {
       const path = this.#pathByConversationId.get(conversationId)
         ?? this.#findPathById(conversationId);
       this.#pathByConversationId.delete(conversationId);
-      this.#titleByConversationId.delete(conversationId);
       if (!path) return;
       const file = this.#deps.app.vault.getAbstractFileByPath(path);
       if (file instanceof TFile) {
@@ -193,7 +191,6 @@ export class HistoryFileWriter {
     const content = serializeChatMarkdown(frontmatter, body);
     const created = await this.#deps.app.vault.create(path, content);
     this.#pathByConversationId.set(conversation.id, created.path);
-    this.#titleByConversationId.set(conversation.id, conversation.title);
   }
 
   async #updateExisting(
@@ -209,28 +206,29 @@ export class HistoryFileWriter {
       return;
     }
 
+    // The file's own title is the last one written, so a rename survives restarts and a file
+    // the user renamed by hand keeps its name until the conversation title actually changes.
+    let previousTitle: unknown;
+    await this.#deps.app.fileManager.processFrontMatter(existing, (fm: Record<string, unknown>) => {
+      previousTitle = fm.title;
+      Object.assign(fm, frontmatter);
+      for (const key of Object.keys(fm)) {
+        if (!(key in frontmatter) && OWNED_FRONTMATTER_KEYS.has(key)) delete fm[key];
+      }
+    });
+    await this.#deps.app.vault.process(existing, (data) => replaceMarkdownBody(data, body));
+
     let target: TFile = existing;
-    const lastTitle = this.#titleByConversationId.get(conversation.id);
-    if (lastTitle !== undefined && lastTitle !== conversation.title) {
+    if (typeof previousTitle === 'string' && previousTitle !== conversation.title) {
       const desired = this.#renamedPathForTitleChange(conversation, target.path);
       if (desired !== target.path) {
         await this.#ensureParentFolders(desired);
         await this.#deps.app.fileManager.renameFile(target, desired);
         const renamed = this.#deps.app.vault.getAbstractFileByPath(desired);
         if (renamed instanceof TFile) target = renamed;
-        this.#pathByConversationId.set(conversation.id, target.path);
       }
     }
-
-    await this.#deps.app.fileManager.processFrontMatter(target, (fm: Record<string, unknown>) => {
-      for (const key of Object.keys(fm)) {
-        if (!(key in frontmatter)) delete fm[key];
-      }
-      Object.assign(fm, frontmatter);
-    });
-    await this.#deps.app.vault.process(target, (data) => replaceMarkdownBody(data, body));
     this.#pathByConversationId.set(conversation.id, target.path);
-    this.#titleByConversationId.set(conversation.id, conversation.title);
   }
 
   #renamedPathForTitleChange(conversation: Conversation, currentPath: string): string {

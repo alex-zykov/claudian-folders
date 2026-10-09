@@ -333,7 +333,7 @@ describe('HistoryFileWriter', () => {
       .toBe(conversation.id);
   });
 
-  it('renames on title change after restart when title was seeded from frontmatter', async () => {
+  it('renames on title change after restart using the title stored in the file', async () => {
     const existingPath = 'Projects/A/Plan review.chat.md';
     const existing = createFile(existingPath, '---\nid: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\n---\n');
     const harness = createVaultHarness([
@@ -357,7 +357,6 @@ describe('HistoryFileWriter', () => {
       listConversationMeta: () => [],
       reportError: jest.fn(),
     });
-    writer.seedFromMetadataCache();
 
     conversation = createConversation({ title: 'Renamed plan' });
     writer.scheduleWrite(conversation.id);

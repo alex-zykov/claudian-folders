@@ -1,18 +1,20 @@
 import type { App, TFile, WorkspaceLeaf } from 'obsidian';
 import { TFile as ObsidianTFile, WorkspaceLeaf as ObsidianWorkspaceLeaf } from 'obsidian';
 
+import type { ChatFileOpenMode } from '@/core/types';
+import { VIEW_TYPE_CLAUDIAN } from '@/core/types';
 import { readChatFileId } from '@/features/chat/history-file/HistoryFileWriter';
 
 export interface ChatFileOpenHandlerDeps {
   readonly app: App;
-  activateView(): Promise<void>;
-  openConversation(id: string): Promise<void>;
+  getMode(): ChatFileOpenMode;
   hasConversation(id: string): boolean;
-  /** Chat routing is a user setting; when off, chat files open as regular markdown. */
-  isEnabled(): boolean;
-  findConversationAcrossViews(
-    conversationId: string,
-  ): { view: { getTabManager(): { openConversation(id: string): Promise<void> } | null } } | null;
+  /** Shows a conversation that is already open in a chat view; false when no view has it. */
+  revealOpenConversation(id: string): Promise<boolean>;
+  /** Opens a conversation in the chat view placed by the view-placement setting. */
+  openConversationInClaudian(id: string): Promise<void>;
+  /** The tab manager of the chat view mounted in `leaf`, or null when it is not a ready chat view. */
+  getLeafTabManager(leaf: WorkspaceLeaf): { openConversation(id: string): Promise<void> } | null;
 }
 
 type SetViewState = WorkspaceLeaf['setViewState'];
@@ -22,14 +24,15 @@ interface PatchedLeafPrototype {
 }
 
 /**
- * Routes Obsidian open of `claudian-chat` markdown into the Claudian chat view.
- * Escape hatch: command sets a one-shot flag so markdown opens normally.
+ * Opens `claudian-chat` markdown as its conversation, following the chat-file open mode:
+ * inside the chat view where it lives, in the clicked leaf turned into a chat of its own, or
+ * as a plain note. A conversation that is already open in a chat view is revealed there
+ * instead of being duplicated.
  */
 export class ChatFileOpenHandler {
   readonly #deps: ChatFileOpenHandlerDeps;
   #originalSetViewState: SetViewState | null = null;
   #patchedProto: PatchedLeafPrototype | null = null;
-  #openAsMarkdownOnce = false;
   #disposed = false;
 
   constructor(deps: ChatFileOpenHandlerDeps) {
@@ -53,14 +56,13 @@ export class ChatFileOpenHandler {
       state: Parameters<SetViewState>[0],
       ...rest: []
     ) {
-      if (handler.#disposed || handler.#openAsMarkdownOnce) {
-        handler.#openAsMarkdownOnce = false;
-        return original.call(this, state, ...rest);
-      }
-      if (await handler.#tryRouteChatFile(state)) {
+      if (handler.#disposed) return original.call(this, state, ...rest);
+      const outcome = await handler.#tryRouteChatFile(this, state, original);
+      if (outcome === 'close-file-leaf') {
         this.detach();
         return;
       }
+      if (outcome === 'handled') return;
       return original.call(this, state, ...rest);
     };
     /* eslint-enable @typescript-eslint/no-this-alias -- end leaf.prototype patch */
@@ -75,54 +77,41 @@ export class ChatFileOpenHandler {
     if (original && proto) proto.setViewState = original;
   }
 
-  /** One-shot escape hatch used by the "Open chat file as markdown" command. */
-  allowNextMarkdownOpen(): void {
-    this.#openAsMarkdownOnce = true;
-  }
-
-  async openActiveChatFileAsMarkdown(): Promise<void> {
-    const file = this.#deps.app.workspace.getActiveFile();
-    if (!file || !this.#isChatFile(file)) return;
-    this.allowNextMarkdownOpen();
-    const leaf = this.#deps.app.workspace.getMostRecentLeaf()
-      ?? this.#deps.app.workspace.getLeaf(false);
-    if (!leaf) return;
-    await leaf.setViewState({
-      type: 'markdown',
-      state: { file: file.path },
-      active: true,
-    });
-  }
-
   async #tryRouteChatFile(
+    leaf: WorkspaceLeaf,
     state: Parameters<SetViewState>[0],
-  ): Promise<boolean> {
-    if (!state || typeof state !== 'object') return false;
+    setViewState: SetViewState,
+  ): Promise<'passthrough' | 'handled' | 'close-file-leaf'> {
+    if (!state || typeof state !== 'object') return 'passthrough';
+    const mode = this.#deps.getMode();
     const record = state as { type?: string; state?: { file?: string } };
-    if (record.type !== 'markdown' || !this.#deps.isEnabled()) return false;
+    if (record.type !== 'markdown' || mode === 'note') return 'passthrough';
     const path = record.state?.file;
-    if (typeof path !== 'string' || path.length === 0) return false;
+    if (typeof path !== 'string' || path.length === 0) return 'passthrough';
     const file = this.#deps.app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof ObsidianTFile) || !this.#isChatFile(file)) return false;
+    if (!(file instanceof ObsidianTFile) || !this.#isChatFile(file)) return 'passthrough';
 
     const id = readChatFileId(
       this.#deps.app.metadataCache?.getFileCache?.(file)?.frontmatter,
     );
-    if (!id) return false;
+    // An unknown chat keeps the markdown view so the file stays reachable.
+    if (!id || !this.#deps.hasConversation(id)) return 'passthrough';
 
-    // An unknown or failing chat keeps the markdown view so the file stays reachable.
-    if (!this.#deps.hasConversation(id)) return false;
     try {
-      await this.#deps.activateView();
-      const manager = this.#deps.findConversationAcrossViews(id)?.view.getTabManager();
-      if (manager) {
-        await manager.openConversation(id);
-      } else {
-        await this.#deps.openConversation(id);
+      if (await this.#deps.revealOpenConversation(id)) return 'close-file-leaf';
+      if (mode === 'in-claudian') {
+        await this.#deps.openConversationInClaudian(id);
+        return 'close-file-leaf';
       }
-      return true;
+      await setViewState.call(leaf, { type: VIEW_TYPE_CLAUDIAN, active: true });
+      const manager = this.#deps.getLeafTabManager(leaf);
+      if (!manager) throw new Error('Chat view is not ready');
+      await manager.openConversation(id);
+      return 'handled';
     } catch {
-      return false;
+      // The leaf may already be a chat view; put the file back so it stays reachable.
+      await setViewState.call(leaf, state);
+      return 'handled';
     }
   }
 

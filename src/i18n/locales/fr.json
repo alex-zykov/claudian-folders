@@ -136,9 +136,14 @@
       "name": "Auto-switch context",
       "desc": "When the active note changes, open the most recent chat for that note's folder or nearest ancestor. Never creates a chat."
     },
-    "openChatFilesInChat": {
-      "name": "Ouvrir les fichiers de chat dans la vue de chat",
-      "desc": "Cliquer sur un fichier .chat.md ouvre la conversation au lieu du fichier markdown. Désactivé : les fichiers de chat s'ouvrent comme des notes ordinaires."
+    "chatFileOpenMode": {
+      "name": "Ouverture des fichiers de chat",
+      "desc": "Où la conversation s'affiche quand on ouvre un fichier .chat.md.",
+      "options": {
+        "inClaudian": "Dans Claudian",
+        "separateTab": "Dans un onglet séparé",
+        "note": "Comme note"
+      }
     },
     "titleLanguage": {
       "name": "Langue de génération des titres",

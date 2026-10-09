@@ -136,9 +136,14 @@
       "name": "Auto-switch context",
       "desc": "When the active note changes, open the most recent chat for that note's folder or nearest ancestor. Never creates a chat."
     },
-    "openChatFilesInChat": {
-      "name": "在聊天视图中打开聊天文件",
-      "desc": "点击 .chat.md 文件时打开对话，而不是 Markdown 文件。关闭时，聊天文件作为普通笔记打开。"
+    "chatFileOpenMode": {
+      "name": "聊天文件的打开方式",
+      "desc": "打开 .chat.md 文件时在何处显示对话。",
+      "options": {
+        "inClaudian": "在 Claudian 内",
+        "separateTab": "在单独的标签页",
+        "note": "作为笔记"
+      }
     },
     "titleLanguage": {
       "name": "标题生成语言",

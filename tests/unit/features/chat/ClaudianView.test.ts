@@ -1,4 +1,5 @@
 import { createClaudianView } from '@test/helpers/features/chat/ClaudianViewHarness';
+import { NOOP_CHAT_HISTORY_FILES } from '@test/helpers/features/chat/noopChatHistoryFiles';
 import { createMockEl } from '@test/helpers/MockElement';
 import { Platform, Scope } from 'obsidian';
 
@@ -201,6 +202,21 @@ describe('ClaudianView tab controls', () => {
     expect(manager.createTab).toHaveBeenCalledTimes(1);
     expect(manager.createNewConversation).toHaveBeenCalledTimes(1);
     expect(historyContainer.querySelector('.claudian-history-menu')?.hasClass('visible')).toBe(true);
+  });
+
+  it('opens a new chat in its own tab instead of a view tab when chat files use separate tabs', async () => {
+    const openNewChatInSeparateTab = jest.fn().mockResolvedValue(true);
+    const { contentEl, manager } = await openView({
+      plugin: {
+        chatHistoryFiles: { ...NOOP_CHAT_HISTORY_FILES, openNewChatInSeparateTab },
+      },
+    });
+
+    contentEl.querySelector('.claudian-new-tab-btn')!.click();
+    await new Promise(resolve => window.setTimeout(resolve, 0));
+
+    expect(openNewChatInSeparateTab).toHaveBeenCalledTimes(1);
+    expect(manager.createTab).not.toHaveBeenCalled();
   });
 
   it('keeps tab controls in the view-owned input row', async () => {

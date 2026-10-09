@@ -164,8 +164,10 @@ export class ClaudianChatFeatureHost extends ClaudianFeatureHost implements Chat
     return this.domains.conversations.handleMissingProviderSession(id, missingProviderSessionId);
   }
 
-  renameConversation(id: string, title: string): Promise<void> {
-    return this.domains.conversations.renameConversation(id, title);
+  async renameConversation(id: string, title: string): Promise<void> {
+    await this.domains.conversations.renameConversation(id, title);
+    // The chat file follows the title: generated and manual renames both land here.
+    this.chatHistoryFiles.scheduleWrite(id);
   }
 
   setLinkedContentPinned(contentPath: string, isPinned: boolean): Promise<void> {

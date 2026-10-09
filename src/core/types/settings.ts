@@ -119,6 +119,14 @@ export interface StoredChatModelSelection {
  * `string` here.  The active provider casts internally when it needs
  * narrower types.
  */
+/**
+ * Where a `.chat.md` click shows its conversation: inside the chat view where it lives
+ * (sidebar or tab), in a tab of its own, or not at all (the file opens as a note).
+ */
+export type ChatFileOpenMode = 'in-claudian' | 'separate-tab' | 'note';
+
+export const CHAT_FILE_OPEN_MODES: readonly ChatFileOpenMode[] = ['in-claudian', 'separate-tab', 'note'];
+
 export interface ClaudianSettings {
   // User preferences
   userName: string;
@@ -180,11 +188,8 @@ export interface ClaudianSettings {
    * linked folder equals the note's folder or is its nearest ancestor.
    */
   autoSwitchContext: boolean;
-  /**
-   * When true, opening a `.chat.md` file shows its conversation in the chat view.
-   * When false (default), chat files open as regular markdown notes.
-   */
-  openChatFilesInChat: boolean;
+  /** Where opening a `.chat.md` file shows its conversation. */
+  chatFileOpenMode: ChatFileOpenMode;
   chatViewPlacement: ChatViewPlacement;
   enableZenMode: boolean;
   /** Null keeps the zen panel docked. */

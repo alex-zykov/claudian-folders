@@ -7,12 +7,15 @@ import {
   listDeviceSessionFolders,
 } from '@/app/storage/ChatHistoryFileAdmission';
 import type { SharedStorageService } from '@/app/storage/SharedStorageService';
-import type { ClaudianSettings } from '@/core/types';
+import type { ChatFileOpenMode, ClaudianSettings } from '@/core/types';
+import type { ChatHistoryFilePort } from '@/features/chat/ChatFeatureHost';
 import { ChatFileOpenHandler } from '@/features/chat/history-file/ChatFileOpenHandler';
 import { ChatHistoryFileImporter } from '@/features/chat/history-file/ChatHistoryFileImporter';
 import { HistoryFileWriter } from '@/features/chat/history-file/HistoryFileWriter';
+import { revealWorkspaceLeaf } from '@/utils/obsidianCompat';
 
-import type { ClaudianViews } from './ClaudianViews';
+import { type ClaudianViews, isClaudianView } from './ClaudianViews';
+import { SeparateChatTabs } from './SeparateChatTabs';
 
 export interface ChatHistoryFileSubsystemDeps {
   readonly app: App;
@@ -20,29 +23,41 @@ export interface ChatHistoryFileSubsystemDeps {
   readonly conversations: ConversationService;
   readonly views: ClaudianViews;
   isWriteHistoryFileEnabled(): boolean;
-  isOpenChatFilesInChatEnabled(): boolean;
+  getChatFileOpenMode(): ChatFileOpenMode;
   reportError(error: unknown): void;
 }
 
 /**
  * Main-owned wiring for chat history files: writer projection, import admission,
- * and open-on-click routing. Keeps storage-layout policy and settings/delete
+ * open-on-click routing, and where new chats open. Keeps storage-layout policy and settings/delete
  * side effects out of feature modules and out of inline main lambdas.
  */
 export class ChatHistoryFileSubsystem {
   readonly writer: HistoryFileWriter;
   readonly importer: ChatHistoryFileImporter;
   readonly openHandler: ChatFileOpenHandler;
+  readonly separateTabs: SeparateChatTabs;
+  /** The surface chat features use: writer operations plus new-chat placement. */
+  readonly port: ChatHistoryFilePort;
 
   private constructor(
     writer: HistoryFileWriter,
     importer: ChatHistoryFileImporter,
     openHandler: ChatFileOpenHandler,
+    separateTabs: SeparateChatTabs,
     private readonly deps: ChatHistoryFileSubsystemDeps,
   ) {
     this.writer = writer;
     this.importer = importer;
     this.openHandler = openHandler;
+    this.separateTabs = separateTabs;
+    this.port = {
+      scheduleWrite: id => writer.scheduleWrite(id),
+      trashForConversation: id => writer.trashForConversation(id),
+      startBackfill: () => writer.startBackfill(),
+      cancelBackfill: () => writer.cancelBackfill(),
+      openNewChatInSeparateTab: () => separateTabs.openNewChat(),
+    };
   }
 
   static create(deps: ChatHistoryFileSubsystemDeps): ChatHistoryFileSubsystem {
@@ -55,7 +70,6 @@ export class ChatHistoryFileSubsystem {
       listConversationMeta: () => deps.conversations.getConversationList(),
       reportError: error => deps.reportError(error),
     });
-    writer.seedFromMetadataCache();
 
     const adapter = deps.storage.getAdapter();
     const listDeviceFolders = () => listDeviceSessionFolders(path => adapter.listFolders(path));
@@ -81,21 +95,33 @@ export class ChatHistoryFileSubsystem {
       reportError: error => deps.reportError(error),
     });
 
+    const { workspace } = deps.app;
     const openHandler = new ChatFileOpenHandler({
       app: deps.app,
-      activateView: () => deps.views.activateView(),
-      openConversation: async (id) => {
-        await deps.views.activateView();
-        const view = deps.views.getView();
-        const manager = view?.getTabManager();
-        if (manager) await manager.openConversation(id);
-      },
+      getMode: () => deps.getChatFileOpenMode(),
       hasConversation: id => deps.conversations.hasLiveConversation(id),
-      isEnabled: () => deps.isOpenChatFilesInChatEnabled(),
-      findConversationAcrossViews: id => deps.views.findConversationAcrossViews(id),
+      revealOpenConversation: async (id) => {
+        const open = deps.views.findConversationAcrossViews(id);
+        const manager = open?.view.getTabManager();
+        if (!open || !manager) return false;
+        await manager.openConversation(id);
+        await revealWorkspaceLeaf(workspace, open.view.leaf);
+        return true;
+      },
+      openConversationInClaudian: async (id) => {
+        await deps.views.activateView();
+        const manager = deps.views.getView()?.getTabManager();
+        if (!manager) throw new Error('Chat view is not ready');
+        await manager.openConversation(id);
+      },
+      getLeafTabManager: leaf => (isClaudianView(leaf.view) ? leaf.view.getTabManager() : null),
+    });
+    const separateTabs = new SeparateChatTabs({
+      workspace,
+      getMode: () => deps.getChatFileOpenMode(),
     });
 
-    return new ChatHistoryFileSubsystem(writer, importer, openHandler, deps);
+    return new ChatHistoryFileSubsystem(writer, importer, openHandler, separateTabs, deps);
   }
 
   register(registerEvent: (eventRef: EventRef) => void): void {

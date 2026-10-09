@@ -345,16 +345,20 @@ describe('ClaudianSettingsStorage', () => {
       expect(result.writeHistoryFile).toBe(true);
     });
 
-    it('keeps chat files opening as regular notes unless enabled', async () => {
+    it.each([
+      [undefined, 'in-claudian'],
+      ['bogus', 'in-claudian'],
+      [true, 'in-claudian'],
+      ['in-claudian', 'in-claudian'],
+      ['separate-tab', 'separate-tab'],
+      ['note', 'note'],
+    ])('decodes chatFileOpenMode %j as %s', async (stored, expected) => {
       mockAdapter.exists.mockResolvedValue(true);
-      mockAdapter.read.mockResolvedValue(JSON.stringify({}));
-      expect((await storage.load()).openChatFilesInChat).toBe(false);
+      mockAdapter.read.mockResolvedValue(JSON.stringify(
+        stored === undefined ? {} : { chatFileOpenMode: stored },
+      ));
 
-      mockAdapter.read.mockResolvedValue(JSON.stringify({ openChatFilesInChat: 'yes' }));
-      expect((await storage.load()).openChatFilesInChat).toBe(false);
-
-      mockAdapter.read.mockResolvedValue(JSON.stringify({ openChatFilesInChat: true }));
-      expect((await storage.load()).openChatFilesInChat).toBe(true);
+      expect((await storage.load()).chatFileOpenMode).toBe(expected);
     });
 
     it('fails closed for invalid autoSwitchContext values', async () => {

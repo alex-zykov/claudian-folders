@@ -42,7 +42,7 @@ describe('ChatHistoryFileSubsystem', () => {
       conversations,
       views,
       isWriteHistoryFileEnabled: () => true,
-      isOpenChatFilesInChatEnabled: () => false,
+      getChatFileOpenMode: () => 'in-claudian' as const,
       reportError,
     });
     const failure = new Error('trash failed');
@@ -88,7 +88,7 @@ describe('ChatHistoryFileSubsystem', () => {
       conversations,
       views,
       isWriteHistoryFileEnabled: () => true,
-      isOpenChatFilesInChatEnabled: () => false,
+      getChatFileOpenMode: () => 'in-claudian' as const,
       reportError,
     });
     const start = jest.spyOn(subsystem.writer, 'startBackfill').mockImplementation(() => undefined);

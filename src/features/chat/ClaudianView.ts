@@ -454,7 +454,10 @@ export class ClaudianView extends ItemView implements ZenModeSource {
   }
 
   private requestNewTab(): void {
-    void this.createNewTab().catch(() => new Notice('Failed to create tab'));
+    void (async () => {
+      if (await this.plugin.chatHistoryFiles.openNewChatInSeparateTab()) return;
+      await this.createNewTab();
+    })().catch(() => new Notice('Failed to create tab'));
   }
 
   private requestNewConversation(): void {
@@ -465,7 +468,10 @@ export class ClaudianView extends ItemView implements ZenModeSource {
   }
 
   private requestDualNew(): void {
-    void this.sessionNavigation.activateOrCreateDraftTab()
+    void (async () => {
+      if (await this.plugin.chatHistoryFiles.openNewChatInSeparateTab()) return;
+      await this.sessionNavigation.activateOrCreateDraftTab();
+    })()
       .catch(() => new Notice('Failed to start a new conversation'));
   }
 

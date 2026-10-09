@@ -32,6 +32,7 @@ export { type ProviderId } from './provider';
 export {
   type ApprovalDecision,
   type AuxiliaryContinuityReset,
+  type ChatFileOpenMode,
   type ClaudianSettings,
   type EnvironmentScope,
   type EnvSnippet,

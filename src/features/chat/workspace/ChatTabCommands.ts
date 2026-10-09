@@ -9,6 +9,8 @@ export interface ChatTabCommandsDeps {
     getView(): ChatViewHost | null;
     activateView(): Promise<void>;
   };
+  /** Opens a new chat in its own tab when chat files use separate tabs; false otherwise. */
+  openNewChatInSeparateTab(): Promise<boolean>;
 }
 
 /** Palette commands that act on the focused chat view's tabs. */
@@ -22,6 +24,7 @@ export function createChatTabCommands(deps: ChatTabCommandsDeps): Command[] {
   };
 
   const openNewTab = async (): Promise<void> => {
+    if (await deps.openNewChatInSeparateTab()) return;
     const existingView = views.getView();
     if (existingView) {
       if (await existingView.handleNewConversationCommand()) return;

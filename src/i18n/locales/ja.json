@@ -136,9 +136,14 @@
       "name": "Auto-switch context",
       "desc": "When the active note changes, open the most recent chat for that note's folder or nearest ancestor. Never creates a chat."
     },
-    "openChatFilesInChat": {
-      "name": "チャットファイルをチャットビューで開く",
-      "desc": ".chat.md をクリックすると、Markdown ファイルではなく会話が開きます。オフの場合、チャットファイルは通常のノートとして開きます。"
+    "chatFileOpenMode": {
+      "name": "チャットファイルの開き方",
+      "desc": ".chat.md を開いたときに会話を表示する場所です。",
+      "options": {
+        "inClaudian": "Claudian 内",
+        "separateTab": "別のタブ",
+        "note": "ノートとして"
+      }
     },
     "titleLanguage": {
       "name": "タイトル生成言語",

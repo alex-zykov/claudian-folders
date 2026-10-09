@@ -55,7 +55,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   expandFileEditsByDefault: false,
   writeHistoryFile: false,
   autoSwitchContext: false,
-  openChatFilesInChat: false,
+  chatFileOpenMode: 'in-claudian',
   chatViewPlacement: 'right-sidebar',
   enableZenMode: true,
   zenModePosition: null,
