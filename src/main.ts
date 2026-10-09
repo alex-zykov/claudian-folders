@@ -92,6 +92,12 @@ export default class ClaudianPlugin extends Plugin {
   private sessionInputCleanup: Promise<void> | null = null;
   private sessionInputCleanupTimer: number | null = null;
 
+  /** "Open Claudian": a fresh chat tab when chats use main-area tabs, otherwise the chat view. */
+  private async openClaudian(): Promise<void> {
+    if (await this.chatHistoryFiles.separateTabs.openHome()) return;
+    await this.views.activateView();
+  }
+
   async onload() {
     StartupProfiler.startOnload();
     try {
@@ -113,14 +119,14 @@ export default class ClaudianPlugin extends Plugin {
       this.chatHistoryFiles.register(eventRef => this.registerEvent(eventRef));
 
       this.addRibbonIcon('bot', 'Open Claudian', () => {
-        void this.views.activateView();
+        void this.openClaudian();
       });
 
       this.addCommand({
         id: 'open-view',
         name: 'Open chat view',
         callback: () => {
-          void this.views.activateView();
+          void this.openClaudian();
         },
       });
 
@@ -286,6 +292,7 @@ export default class ClaudianPlugin extends Plugin {
       views: this.views,
       isWriteHistoryFileEnabled: () => this.settings.writeHistoryFile === true,
       getChatFileOpenMode: () => this.settings.chatFileOpenMode,
+      getChatViewPlacement: () => this.settings.chatViewPlacement,
       reportError: () => {
         new Notice('Chat history file operation failed');
       },

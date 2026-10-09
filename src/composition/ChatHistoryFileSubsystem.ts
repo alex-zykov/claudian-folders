@@ -8,6 +8,7 @@ import {
 } from '@/app/storage/ChatHistoryFileAdmission';
 import type { SharedStorageService } from '@/app/storage/SharedStorageService';
 import type { ChatFileOpenMode, ClaudianSettings } from '@/core/types';
+import type { ChatViewPlacement } from '@/core/types/settings';
 import type { ChatHistoryFilePort } from '@/features/chat/ChatFeatureHost';
 import { ChatFileOpenHandler } from '@/features/chat/history-file/ChatFileOpenHandler';
 import { ChatHistoryFileImporter } from '@/features/chat/history-file/ChatHistoryFileImporter';
@@ -24,6 +25,7 @@ export interface ChatHistoryFileSubsystemDeps {
   readonly views: ClaudianViews;
   isWriteHistoryFileEnabled(): boolean;
   getChatFileOpenMode(): ChatFileOpenMode;
+  getChatViewPlacement(): ChatViewPlacement;
   reportError(error: unknown): void;
 }
 
@@ -119,6 +121,8 @@ export class ChatHistoryFileSubsystem {
     const separateTabs = new SeparateChatTabs({
       workspace,
       getMode: () => deps.getChatFileOpenMode(),
+      getPlacement: () => deps.getChatViewPlacement(),
+      getViews: () => deps.views.getAllViews(),
     });
 
     return new ChatHistoryFileSubsystem(writer, importer, openHandler, separateTabs, deps);

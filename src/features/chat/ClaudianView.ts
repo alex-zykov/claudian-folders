@@ -127,8 +127,16 @@ export class ClaudianView extends ItemView implements ZenModeSource {
     return VIEW_TYPE_CLAUDIAN;
   }
 
+  /** The leaf is named after the chat it shows, like the chat file; blank chats keep the brand name. */
   getDisplayText(): string {
-    return 'Claudian';
+    const conversationId = this.tabManager?.getActiveTab()?.conversationId;
+    const title = conversationId ? this.plugin.getConversationSummary(conversationId)?.title : undefined;
+    return title || 'Claudian';
+  }
+
+  /** Obsidian reads the display text only when the header is told to redraw. */
+  private refreshLeafHeader(): void {
+    (this.leaf as { updateHeader?: () => void }).updateHeader?.();
   }
 
   getIcon(): string {
@@ -548,6 +556,7 @@ export class ClaudianView extends ItemView implements ZenModeSource {
       const items = this.tabManager.getTabBarItems();
       this.tabBar.update(items);
       this.updateTabBarVisibility();
+      this.refreshLeafHeader();
     }, this.containerEl.ownerDocument.defaultView ?? null);
   }
 
@@ -704,6 +713,7 @@ export class ClaudianView extends ItemView implements ZenModeSource {
   notifyConversationListChanged(): void {
     for (const tab of this.tabManager?.getAllTabs() ?? []) tab.composer.invalidateSessionMentions();
     this.sessions.invalidate();
+    this.refreshLeafHeader();
   }
 
   private notifyConversationNavigationChanged(): void {

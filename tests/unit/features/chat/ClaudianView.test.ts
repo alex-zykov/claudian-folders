@@ -174,6 +174,41 @@ describe('ClaudianView model refresh routing', () => {
   });
 });
 
+describe('ClaudianView leaf title', () => {
+  const summaries: Record<string, { title: string }> = { c1: { title: 'Plan review' } };
+  const plugin = { getConversationSummary: (id: string) => summaries[id] ?? null };
+
+  it('names the leaf after the active chat and falls back to the brand name', () => {
+    const view = createClaudianView({
+      plugin,
+      tabManager: { getActiveTab: () => ({ conversationId: 'c1' }) },
+    });
+    expect(view.getDisplayText()).toBe('Plan review');
+
+    view.tabManager = { getActiveTab: () => ({ conversationId: null }) };
+    expect(view.getDisplayText()).toBe('Claudian');
+
+    view.tabManager = { getActiveTab: () => ({ conversationId: 'gone' }) };
+    expect(view.getDisplayText()).toBe('Claudian');
+
+    view.tabManager = null;
+    expect(view.getDisplayText()).toBe('Claudian');
+  });
+
+  it('refreshes the leaf header when conversation titles may have changed', () => {
+    const updateHeader = jest.fn();
+    const view = createClaudianView({
+      plugin,
+      leaf: { updateHeader },
+      tabManager: { getAllTabs: () => [], getActiveTab: () => null },
+    });
+
+    view.notifyConversationListChanged();
+
+    expect(updateHeader).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('ClaudianView tab controls', () => {
   it('builds chat navigation actions as native buttons that reach their owners', async () => {
     const { contentEl, manager } = await openView();
