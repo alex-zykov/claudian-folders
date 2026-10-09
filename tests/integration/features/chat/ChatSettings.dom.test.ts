@@ -20,6 +20,7 @@ import type { ProviderId } from '@/core/providers/types';
 import type { ClaudianSettings, Conversation } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
 import { getChatSettingsSnapshot } from '@/features/chat/ChatSettings';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { destroyTab } from '@/features/chat/tabs/TabLifecycle';
 import { updateTabProviderSettings } from '@/features/chat/tabs/tabProviderSettings';
 import { refreshTabProviderUI } from '@/features/chat/tabs/tabProviderUI';
@@ -91,6 +92,7 @@ function createChatHarness(settings: ClaudianSettings, id: ProviderId, selected:
   const plugin = {
     ...(harness.plugin as ChatFeatureHost), app, settings,
     chatModelSelection: new ChatModelSelectionCoordinator(settingsCoordinator),
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
     executionPersistence: {
       registerExecutionBinding: () => undefined,
       releaseExecutionBinding: () => undefined,

@@ -129,6 +129,18 @@ describe('LinkedContentController', () => {
     expect(excludedController.getSnapshot().path).toBeNull();
   });
 
+  it('does not auto-draft chat history markdown files', () => {
+    const chatFile = createFile('Projects/A/Plan review.chat.md');
+    const harness = createHarness([chatFile]);
+    (harness.app.metadataCache.getFileCache as jest.Mock).mockReturnValue({
+      frontmatter: { 'claudian-chat': true, id: 'conv-1' },
+    });
+
+    harness.setActiveFile(chatFile);
+    harness.controller.resetAutoDraft();
+    expect(harness.controller.getSnapshot().path).toBeNull();
+  });
+
   it('waits for metadata before auto-linking when excluded tags are configured', () => {
     const markdown = createFile('Notes/Startup.md');
     const harness = createHarness([markdown]);

@@ -128,6 +128,10 @@
       "name": "会話タイトルを自動生成",
       "desc": "最初のユーザーメッセージ送信後に会話タイトルを自動的に生成します。"
     },
+    "writeHistoryFile": {
+      "name": "Write history file into linked folder",
+      "desc": "After each turn, create or update a generated .chat.md file in the conversation's linked folder. Turning this on backfills existing chats."
+    },
     "titleLanguage": {
       "name": "タイトル生成言語",
       "desc": "自動生成される会話タイトルに使用する言語。",

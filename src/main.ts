@@ -33,6 +33,7 @@ import { VIEW_TYPE_CLAUDIAN } from './core/types';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { ConversationLifecycle } from './features/chat/conversation/ConversationLifecycle';
 import { InactiveSessionArchiver } from './features/chat/conversation/InactiveSessionArchiver';
+import { HistoryFileWriter } from './features/chat/history-file/HistoryFileWriter';
 import { createChatFocusCommand } from './features/chat/workspace/ChatFocusCommand';
 import { createChatTabCommands } from './features/chat/workspace/ChatTabCommands';
 import { ChatViewPublisher } from './features/chat/workspace/ChatViewPublisher';
@@ -59,6 +60,7 @@ export default class ClaudianPlugin extends Plugin {
   private inactiveSessionArchiver!: InactiveSessionArchiver;
   private conversationLifecycle!: ConversationLifecycle;
   private vaultContentEvents!: VaultContentEvents;
+  private historyFileWriter!: HistoryFileWriter;
   private settingsTab: ClaudianSettingTab | null = null;
   private readonly views = new ClaudianViews(
     this.app.workspace,
@@ -172,6 +174,7 @@ export default class ClaudianPlugin extends Plugin {
     // Return any zen presentation to its view before asynchronous shutdown.
     this.zenMode.dispose();
     this.vaultContentEvents?.dispose();
+    this.historyFileWriter?.dispose();
     this.inactiveSessionArchiver?.dispose();
     this.startupMaintenanceAbort.abort();
     if (this.sessionInputCleanupTimer !== null) {
@@ -194,9 +197,21 @@ export default class ClaudianPlugin extends Plugin {
       deferNonRestoredSessionMetadata: true,
       isChatView: isClaudianView,
       isUnloading: () => this.isUnloading,
-      publishCommittedSettings: async (settings, previous) => this.chatViews.publishSettings(settings, previous),
+      publishCommittedSettings: async (settings, previous) => {
+        this.chatViews.publishSettings(settings, previous);
+        if (settings.writeHistoryFile && !previous.writeHistoryFile) {
+          this.historyFileWriter?.startBackfill();
+        } else if (!settings.writeHistoryFile && previous.writeHistoryFile) {
+          this.historyFileWriter?.cancelBackfill();
+        }
+      },
       // No chat view can hold tabs before loading completes and assigns the lifecycle.
-      onConversationDeleted: conversationId => this.conversationLifecycle.resetDeletedConversationTabs(conversationId),
+      onConversationDeleted: async (conversationId) => {
+        if (this.historyFileWriter) {
+          await this.historyFileWriter.trashForConversation(conversationId);
+        }
+        await this.conversationLifecycle.resetDeletedConversationTabs(conversationId);
+      },
       onConversationListChanged: () => this.chatViews.notifyConversationListChanged(),
       onAllMetadataLoaded: () => this.inactiveSessionArchiver.request(),
       ensureProviderWorkspace: providerId => (
@@ -259,10 +274,20 @@ export default class ClaudianPlugin extends Plugin {
       conversations: domains.conversations,
       views: this.views,
     });
+    this.historyFileWriter = new HistoryFileWriter({
+      app: this.app,
+      isEnabled: () => this.settings.writeHistoryFile === true,
+      getConversation: id => domains.conversations.getCachedConversation(id)
+        ?? domains.conversations.getConversationSync(id),
+      hydrateConversation: id => domains.conversations.getConversationById(id),
+      listConversationMeta: () => domains.conversations.getConversationList(),
+    });
+    this.historyFileWriter.seedFromMetadataCache();
     this.vaultContentEvents = new VaultContentEvents({
       vault: this.app.vault,
       views: this.views,
       conversations: domains.conversations,
+      historyFiles: this.historyFileWriter,
       notifyConversationListChanged: () => this.chatViews.notifyConversationListChanged(),
     });
     this.chatHost = new ClaudianChatFeatureHost({
@@ -273,6 +298,7 @@ export default class ClaudianPlugin extends Plugin {
       sessionSnapshots: this.sessionSnapshots,
       tabWorkspaceMigration: domains.tabWorkspaceMigration,
       zenMode: this.zenMode,
+      chatHistoryFiles: this.historyFileWriter,
     });
     this.inactiveSessionArchiver = new InactiveSessionArchiver(this.chatHost);
   }

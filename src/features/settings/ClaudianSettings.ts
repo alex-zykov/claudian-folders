@@ -406,6 +406,19 @@ export class ClaudianSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(container)
+      .setName(t('settings.writeHistoryFile.name'))
+      .setDesc(t('settings.writeHistoryFile.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.host.settings.writeHistoryFile ?? false)
+          .onChange(async (value) => {
+            await this.host.mutateSettings((settings) => {
+              settings.writeHistoryFile = value;
+            });
+          })
+      );
+
     if (this.host.settings.enableAutoTitleGeneration) {
       new Setting(container)
         .setName(t('settings.titleLanguage.name'))

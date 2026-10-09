@@ -10,6 +10,7 @@ import type { ProviderExecutionLifecycleRegistry } from '@/core/execution';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { ChatMessage, ImageAttachment, ProviderId } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { SideChatSession } from '@/features/chat/side-chat/SideChatSession';
 import { handleForkRequest } from '@/features/chat/tabs/forking/ForkSource';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
@@ -140,6 +141,7 @@ export async function captureSideSource(
     settings: (env.host as unknown as { settings: unknown }).settings,
     getConversationSummary(id: string) { return (this as unknown as { getConversationSync: (id: string) => any }).getConversationSync(id); },
     getConversationSync: (id: string) => env.repository.getSync(id),
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
   } as unknown as ChatFeatureHost;
   const tab = {
     conversationId: chat.conversation.id,

@@ -128,6 +128,10 @@
       "name": "Générer automatiquement les titres de conversation",
       "desc": "Génère automatiquement les titres de conversation après le premier message de l'utilisateur."
     },
+    "writeHistoryFile": {
+      "name": "Write history file into linked folder",
+      "desc": "After each turn, create or update a generated .chat.md file in the conversation's linked folder. Turning this on backfills existing chats."
+    },
     "titleLanguage": {
       "name": "Langue de génération des titres",
       "desc": "Langue utilisée pour les titres de conversation générés automatiquement.",

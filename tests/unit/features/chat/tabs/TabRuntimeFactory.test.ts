@@ -190,6 +190,12 @@ function createPlugin(overrides: Record<string, unknown> = {}) {
         return true;
       }),
     },
+    chatHistoryFiles: {
+      scheduleWrite: jest.fn(),
+      trashForConversation: jest.fn(async () => undefined),
+      startBackfill: jest.fn(),
+      cancelBackfill: jest.fn(),
+    },
     settings,
     getCommittedSettings: () => settings,
     getActiveEnvironmentVariables: jest.fn().mockReturnValue({}),

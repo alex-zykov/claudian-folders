@@ -8,6 +8,7 @@ import { App, Component } from 'obsidian';
 
 import type { ChatMessage, Conversation } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { destroyTab } from '@/features/chat/tabs/TabLifecycle';
 import { createTabRuntime } from '@/features/chat/tabs/TabRuntimeFactory';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
@@ -38,6 +39,7 @@ beforeEach(async () => {
     getConversationSummary: () => conversation,
     getConversationSync: () => conversation,
     getConversationList: () => [conversation],
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
   } as unknown as ChatFeatureHost;
   tab = await createTabRuntime({
     plugin, conversation, component: new Component(),

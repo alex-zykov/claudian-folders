@@ -14,6 +14,7 @@ import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCo
 import type { Conversation, SessionMetadata } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
 import { ChatExecutionCoordinator } from '@/features/chat/execution/ChatExecutionCoordinator';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { refreshTabContextUsage } from '@/features/chat/tabs/tabProviderUI';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
 
@@ -384,6 +385,7 @@ test('context controls read detached metadata without copying the transcript', a
     getCommittedSettings: () => settings,
     getConversationSummary: (id: string) => repository.getSummary(id),
     getConversationSync: (id: string) => repository.getSync(id),
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
   } as unknown as ChatFeatureHost;
 
   refreshTabContextUsage(tab, host);

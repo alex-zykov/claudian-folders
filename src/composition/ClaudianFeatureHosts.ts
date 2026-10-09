@@ -22,6 +22,7 @@ import type {
 } from '@/core/types';
 import type {
   ChatFeatureHost,
+  ChatHistoryFilePort,
   ChatViewHost,
   TabWorkspaceStateDeliveryRegistration,
 } from '@/features/chat/ChatFeatureHost';
@@ -54,6 +55,7 @@ export interface ChatFeatureHostDomains extends FeatureHostDomains {
   readonly tabWorkspaceMigration: TabWorkspaceMigrationCoordinator;
   readonly conversationLifecycle: ConversationLifecycle;
   readonly zenMode: Pick<ZenModeController, 'register'>;
+  readonly chatHistoryFiles: ChatHistoryFilePort;
 }
 
 /** Feature-neutral application capabilities for settings, inline edit, and chat. */
@@ -116,12 +118,14 @@ export class ClaudianChatFeatureHost extends ClaudianFeatureHost implements Chat
   readonly chatModelSelection: ChatModelSelectionCoordinator;
   readonly executionPersistence: ConversationRepository;
   readonly conversationLifecycle: ConversationLifecycle;
+  readonly chatHistoryFiles: ChatHistoryFilePort;
 
   constructor(protected readonly domains: ChatFeatureHostDomains) {
     super(domains);
     this.chatModelSelection = domains.chatModelSelection;
     this.executionPersistence = domains.executionPersistence;
     this.conversationLifecycle = domains.conversationLifecycle;
+    this.chatHistoryFiles = domains.chatHistoryFiles;
   }
 
   writeSessionSnapshot(conversationId: string, markdown: string): Promise<string> {

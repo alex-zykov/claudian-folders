@@ -11,6 +11,7 @@ import { ProviderExecutionLifecycleRegistry } from '@/core/execution';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { ClaudianSettings, Conversation } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { activateTab, deactivateTab, destroyTab } from '@/features/chat/tabs/TabLifecycle';
 import { createTabRuntime } from '@/features/chat/tabs/TabRuntimeFactory';
 import { VaultMentionDataProvider } from '@/shared/mention/VaultMentionDataProvider';
@@ -89,6 +90,7 @@ async function createView(fakeBackend?: FakeSideBackend) {
     updateConversation: async (_id: string, patch: unknown) => { saved.push(structuredClone(patch)); },
     mutateSettings: async (mutate: (settings: ClaudianSettings) => void) => mutate(settings),
     chatModelSelection: { beginIntent: () => 1, commitIntent: async () => true },
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
   } as unknown as ChatFeatureHost;
   const tab = await createTabRuntime({
     plugin, conversation, component: new Component(),

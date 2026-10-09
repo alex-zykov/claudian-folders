@@ -20,6 +20,7 @@ import { ProviderWorkspaceRegistry } from '@/core/providers/ProviderWorkspaceReg
 import { getToolIcon } from '@/core/tools/toolIcons';
 import type { ClaudianSettings, Conversation, StreamChunk } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { destroyTab } from '@/features/chat/tabs/TabLifecycle';
 import { createTabRuntime } from '@/features/chat/tabs/TabRuntimeFactory';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
@@ -148,6 +149,7 @@ async function createZenFixture(options: { enabled?: boolean; ready?: boolean } 
   const plugin = {
     ...(harness.plugin as ChatFeatureHost), app, settings,
     chatModelSelection: new ChatModelSelectionCoordinator(settingsCoordinator),
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
     executionPersistence: {
       registerExecutionBinding: () => undefined,
       releaseExecutionBinding: () => undefined,

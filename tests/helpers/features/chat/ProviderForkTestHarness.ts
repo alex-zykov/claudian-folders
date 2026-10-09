@@ -18,6 +18,7 @@ import { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
 import type { ChatMessage, Conversation, ProviderId } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
 import { ChatExecutionCoordinator } from '@/features/chat/execution/ChatExecutionCoordinator';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { handleForkRequest } from '@/features/chat/tabs/forking/ForkSource';
 import type { AssembledTabRuntime } from '@/features/chat/tabs/types';
 import { updateCurrentGrokCatalog } from '@/providers/grok/settings';
@@ -66,6 +67,7 @@ export async function createForkTestEnvironment() {
     app, settings,
     getConversationSummary: (id: string) => repository.getSummary(id),
     getConversationSync: (id: string) => repository.getSync(id),
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
   } as unknown as ChatFeatureHost;
   const coordinators: ChatExecutionCoordinator[] = [];
   let sequence = 0;

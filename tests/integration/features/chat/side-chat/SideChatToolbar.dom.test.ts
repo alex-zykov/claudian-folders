@@ -7,6 +7,7 @@ import { App, Component } from 'obsidian';
 
 import type { Conversation } from '@/core/types';
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 import { destroyTab } from '@/features/chat/tabs/TabLifecycle';
 import { createTabRuntime } from '@/features/chat/tabs/TabRuntimeFactory';
 import { VaultMentionDataProvider } from '@/shared/mention/VaultMentionDataProvider';
@@ -50,6 +51,7 @@ it('refreshes destination settings when the side panel collapses, expands, and i
     getConversationSummary(id: string) { return (this as unknown as { getConversationSync: (id: string) => any }).getConversationSync(id); },
     getConversationSync: () => conversation,
     getConversationList: () => [conversation],
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
   } as unknown as ChatFeatureHost;
   const tab = await createTabRuntime({
     plugin,

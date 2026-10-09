@@ -3,6 +3,7 @@ import { ItemView, Scope } from 'obsidian';
 
 import type { ChatFeatureHost } from '@/features/chat/ChatFeatureHost';
 import { ClaudianView } from '@/features/chat/ClaudianView';
+import { NOOP_CHAT_HISTORY_FILES } from '@/features/chat/history-file/noopChatHistoryFiles';
 
 // The Obsidian mock's ItemView omits Component's `load`, which the view's Hover Editor guard binds.
 const itemViewPrototype = ItemView.prototype as unknown as { load?: () => void };
@@ -46,6 +47,7 @@ export function createClaudianView(options: ClaudianViewHarnessOptions = {}): an
     getConversationSummary: () => null,
     findConversationAcrossViews: () => null,
     registerZenModeSource: jest.fn(() => jest.fn()),
+    chatHistoryFiles: NOOP_CHAT_HISTORY_FILES,
     settings: {},
     ...options.plugin,
   };

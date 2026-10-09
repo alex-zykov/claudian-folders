@@ -170,6 +170,11 @@ export interface ClaudianSettings {
   showMessageTimestamps?: boolean;
   deferMathRenderingDuringStreaming: boolean;
   expandFileEditsByDefault: boolean;
+  /**
+   * When true, write/update a generated `.chat.md` history file in the linked
+   * folder after each turn (providers with `supportsChatHistoryFile` only).
+   */
+  writeHistoryFile: boolean;
   chatViewPlacement: ChatViewPlacement;
   enableZenMode: boolean;
   /** Null keeps the zen panel docked. */

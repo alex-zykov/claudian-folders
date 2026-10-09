@@ -128,6 +128,10 @@
       "name": "自動生成對話標題",
       "desc": "在使用者送出第一則訊息後自動生成對話標題。"
     },
+    "writeHistoryFile": {
+      "name": "Write history file into linked folder",
+      "desc": "After each turn, create or update a generated .chat.md file in the conversation's linked folder. Turning this on backfills existing chats."
+    },
     "titleLanguage": {
       "name": "標題生成語言",
       "desc": "自動生成對話標題時使用的語言。",
